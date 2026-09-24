@@ -1,0 +1,502 @@
+openapi: 3.0.3
+info:
+  title: HRMS API
+  version: 0.1.0
+  description: |
+    HR Management System API.
+
+    **Authentication:** `POST /api/auth/login` returns a JWT valid for 30 minutes.
+    Send it as `Authorization: Bearer <token>` on every other route.
+
+    **Authorization** is enforced server-side from the token's identity, never from
+    ids in the request. Object-level denial returns **403**. An `ADMIN` asking for an
+    id that does not exist receives **404**; any other role receives **403** for any id
+    outside their scope, whether or not it exists (existence is not disclosed).
+    See `docs/AUTHORIZATION.md`.
+
+    **Seed accounts** (password `Password@123`): `admin@company.com` (ADMIN, EMP000),
+    `manager@company.com` (MANAGER, EMP010; manages EMP001 and EMP002),
+    `employee1@company.com` (EMP001), `employee2@company.com` (EMP002),
+    `employee3@company.com` (EMP003, reports to EMP000).
+
+servers:
+  - url: /api
+    description: Same host as these docs (local or tunnelled)
+  - url: http://localhost:4000/api
+    description: Local development
+
+tags:
+  - name: Auth
+  - name: Employees
+  - name: Dashboard
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              example: FORBIDDEN
+              enum: [BAD_REQUEST, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, CONFLICT, INTERNAL_ERROR]
+            message:
+              type: string
+              example: You do not have access to this resource
+            details:
+              description: Present on validation errors and field-level authorization errors.
+              type: array
+              items:
+                type: object
+                properties:
+                  path: { type: string, example: email }
+                  message: { type: string, example: A valid email is required }
+
+    Role:
+      type: string
+      enum: [ADMIN, MANAGER, EMPLOYEE]
+
+    EmploymentStatus:
+      type: string
+      enum: [ACTIVE, INACTIVE]
+
+    Employee:
+      type: object
+      required: [id, firstName, lastName, email, department, designation, joiningDate, status, role, managerId, manager, createdAt, updatedAt]
+      properties:
+        id: { type: string, example: EMP001, description: Public id, server-generated. }
+        firstName: { type: string, example: Neha }
+        lastName: { type: string, example: Kulkarni }
+        email: { type: string, format: email, example: employee1@company.com }
+        phone: { type: string, nullable: true, example: '+91-98450-00001' }
+        department: { type: string, example: Engineering }
+        designation: { type: string, example: Software Engineer }
+        joiningDate: { type: string, format: date, example: '2022-01-10' }
+        status: { $ref: '#/components/schemas/EmploymentStatus' }
+        role:
+          allOf: [{ $ref: '#/components/schemas/Role' }]
+          nullable: true
+          description: From the linked login account.
+        managerId: { type: string, nullable: true, example: EMP010 }
+        manager:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string, example: EMP010 }
+            name: { type: string, example: Rahul Verma }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    EmployeeResponse:
+      type: object
+      required: [employee]
+      properties:
+        employee: { $ref: '#/components/schemas/Employee' }
+
+    EmployeeListResponse:
+      type: object
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Employee' }
+        pagination:
+          type: object
+          required: [page, limit, total, totalPages]
+          properties:
+            page: { type: integer, example: 1 }
+            limit: { type: integer, example: 20 }
+            total: { type: integer, example: 15, description: Rows visible to the caller after scoping. }
+            totalPages: { type: integer, example: 1 }
+
+    CreateEmployeeRequest:
+      type: object
+      required: [firstName, lastName, email, department, designation, joiningDate, password]
+      additionalProperties: false
+      description: The id is generated server-side. Creates the employee and their login together.
+      properties:
+        firstName: { type: string, maxLength: 80, example: Tara }
+        lastName: { type: string, maxLength: 80, example: Bhat }
+        email: { type: string, format: email, example: tara.bhat@company.com }
+        phone: { type: string, nullable: true, example: '+91-98450-00100' }
+        department: { type: string, maxLength: 100, example: Engineering }
+        designation: { type: string, maxLength: 100, example: QA Engineer }
+        joiningDate: { type: string, format: date, example: '2026-10-01' }
+        managerId: { type: string, nullable: true, example: EMP010 }
+        role: { $ref: '#/components/schemas/Role' }
+        status: { $ref: '#/components/schemas/EmploymentStatus' }
+        password:
+          type: string
+          format: password
+          minLength: 10
+          description: Initial login password for the new employee.
+          example: Welcome@12345
+
+    UpdateEmployeeRequest:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      description: |
+        Partial: send only the fields that change. Unknown keys → 400.
+        Which keys the caller may send depends on their role and their relationship
+        to the target (see `docs/AUTHORIZATION.md`); a disallowed key → 403 naming it,
+        and nothing is applied. Changing `email` or `status` also updates the login.
+      properties:
+        firstName: { type: string, maxLength: 80 }
+        lastName: { type: string, maxLength: 80 }
+        email: { type: string, format: email }
+        phone: { type: string, nullable: true, example: '+91-98450-00001' }
+        department: { type: string, maxLength: 100 }
+        designation: { type: string, maxLength: 100, example: Senior Software Engineer }
+        joiningDate: { type: string, format: date }
+        managerId: { type: string, nullable: true }
+        role: { $ref: '#/components/schemas/Role' }
+        status: { $ref: '#/components/schemas/EmploymentStatus' }
+
+    DashboardStats:
+      type: object
+      required: [total, active, inactive, byDepartment]
+      description: All numbers are scoped to what the caller may see.
+      properties:
+        total: { type: integer, example: 16 }
+        active: { type: integer, example: 14 }
+        inactive: { type: integer, example: 2 }
+        byDepartment:
+          type: array
+          description: Sorted by department name; counts sum to `total`.
+          items:
+            type: object
+            required: [department, count]
+            properties:
+              department: { type: string, example: Engineering }
+              count: { type: integer, example: 5 }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      additionalProperties: false
+      properties:
+        email: { type: string, format: email, example: employee1@company.com }
+        password: { type: string, format: password, example: Password@123 }
+
+    LoginResponse:
+      type: object
+      required: [token, expiresIn, user]
+      properties:
+        token:
+          type: string
+          description: JWT access token.
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        expiresIn:
+          type: integer
+          description: Seconds until the token expires.
+          example: 1800
+        user:
+          type: object
+          required: [id, email, role, employeeId, name]
+          properties:
+            id: { type: string, example: clx0abc123 }
+            email: { type: string, format: email, example: employee1@company.com }
+            role: { $ref: '#/components/schemas/Role' }
+            employeeId: { type: string, example: EMP001 }
+            name: { type: string, example: Neha Kulkarni }
+
+  responses:
+    BadRequest:
+      description: Request validation failed.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Request validation failed
+              details: [{ path: password, message: Required }]
+    Unauthorized:
+      description: Missing, malformed, expired or tampered token, or the account is inactive.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            error: { code: UNAUTHORIZED, message: Invalid or expired token }
+    Forbidden:
+      description: Authenticated, but the action or object is outside the caller's rights.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            error: { code: FORBIDDEN, message: You do not have access to this resource }
+    NotFound:
+      description: Resource does not exist (only returned to callers who could otherwise see it).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            error: { code: NOT_FOUND, message: Employee not found }
+    Conflict:
+      description: A uniqueness constraint was violated.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            error: { code: CONFLICT, message: A record with this email already exists }
+
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in and receive a JWT
+      description: |
+        The response for an unknown email and for a wrong password is identical
+        (`401`, "Invalid email or password"), so the endpoint cannot be used to
+        enumerate accounts. A deactivated account with the correct password also
+        receives `401`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Authenticated.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LoginResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401':
+          description: Invalid credentials or deactivated account.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example:
+                error: { code: UNAUTHORIZED, message: Invalid email or password }
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Log out
+      description: |
+        Tokens are stateless; the client discards its copy. The route requires a
+        valid token so that a bad token receives the same `401` as everywhere else.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '204': { description: Logged out. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /dashboard/stats:
+    get:
+      tags: [Dashboard]
+      summary: Headline numbers, scoped to the caller
+      description: |
+        `ADMIN` → the whole company · `MANAGER` → self + direct reports · `EMPLOYEE` → themself
+        (`total: 1`). The same `scopeWhere` used by the employee list is applied inside every
+        count and the department grouping, so the dashboard can never reveal more than the list.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Scoped statistics.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DashboardStats' }
+              examples:
+                admin:
+                  value:
+                    total: 16
+                    active: 14
+                    inactive: 2
+                    byDepartment:
+                      - { department: Engineering, count: 5 }
+                      - { department: Finance, count: 3 }
+                      - { department: HR, count: 2 }
+                      - { department: Marketing, count: 3 }
+                      - { department: Sales, count: 4 }
+                employee1:
+                  value:
+                    total: 1
+                    active: 1
+                    inactive: 0
+                    byDepartment: [{ department: Engineering, count: 1 }]
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /me:
+    get:
+      tags: [Employees]
+      summary: The caller's own employee profile
+      description: The employee id is taken from the token, never from the request.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: The caller's record.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmployeeResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /employees:
+    get:
+      tags: [Employees]
+      summary: List employees visible to the caller
+      description: |
+        Scoped **inside the database query** to what the caller may see:
+        `ADMIN` → everyone · `MANAGER` → self + direct reports · `EMPLOYEE` → self.
+        Filters narrow that scope; they can never widen it.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: search, in: query, schema: { type: string, maxLength: 100 }, description: Case-insensitive match on id, first name, last name or email. }
+        - { name: department, in: query, schema: { type: string }, description: Exact match. }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/EmploymentStatus' } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        '200':
+          description: Scoped, paginated list.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmployeeListResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Employees]
+      summary: Create an employee and their login (ADMIN)
+      description: |
+        Spec §9 Test 3: any non-`ADMIN` → **403**. Test 5: `admin` → **201**.
+        The employee row and the user row are written in one transaction; the public
+        id (`EMP100`, `EMP101`, …) comes from a database sequence.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateEmployeeRequest' }
+      responses:
+        '201':
+          description: Created. `Location` header points at the new resource.
+          headers:
+            Location: { schema: { type: string }, example: /api/employees/EMP100 }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmployeeResponse' }
+        '400':
+          description: Validation failed, or `managerId` does not exist.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /employees/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string, pattern: '^EMP\d{3,}$' }
+        example: EMP001
+    get:
+      tags: [Employees]
+      summary: Get one employee
+      description: |
+        Object-level authorization:
+        - `ADMIN` → any id; **404** if it does not exist.
+        - `MANAGER` → self or a direct report; anything else → **403**, whether or not the id exists.
+        - `EMPLOYEE` → self only; anything else → **403**, whether or not the id exists.
+
+        Spec §9 Test 1: `employee1` → `EMP001` → 200. Test 2: `employee1` → `EMP002` → 403.
+        Test 4: `admin` → `EMP002` → 200. Test 6: `manager` → `EMP003` → 403.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: The employee.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmployeeResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Employees]
+      summary: Update an employee (partial)
+      description: |
+        The target is loaded through the same scoped lookup as `GET` (403/404 rules
+        apply). Then every submitted key is checked against the caller's permitted
+        fields:
+
+        | Caller | Target | May update |
+        |---|---|---|
+        | `ADMIN` | anyone | every field |
+        | `MANAGER` | self | `phone` |
+        | `MANAGER` | direct report | `designation`, `department` |
+        | `EMPLOYEE` | self | `phone` |
+        | anyone else | — | nothing |
+
+        Any key outside that set → **403** with `details` naming the fields, and
+        nothing is applied. E.g. `employee1` sending `{ "role": "ADMIN" }` on `EMP001` → 403.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateEmployeeRequest' }
+            examples:
+              employeePhone:
+                summary: employee1 updates own phone
+                value: { phone: '+91-98450-11111' }
+              managerDesignation:
+                summary: manager promotes a direct report
+                value: { designation: Senior Software Engineer }
+              adminFull:
+                summary: admin reassigns and promotes
+                value: { managerId: EMP011, department: Sales, role: MANAGER }
+      responses:
+        '200':
+          description: Updated employee.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmployeeResponse' }
+        '400':
+          description: Validation failed, empty body, unknown key, or invalid `managerId` (missing, self, or would create a cycle).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: Target outside scope, or a submitted field is not permitted for the caller.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example:
+                error:
+                  code: FORBIDDEN
+                  message: 'You are not permitted to update: role'
+                  details: [{ path: role, message: Not permitted for your role }]
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    delete:
+      tags: [Employees]
+      summary: Deactivate an employee (ADMIN, soft delete)
+      description: |
+        Sets `status = INACTIVE` and disables the login (`isActive = false`) in one
+        transaction. The row is kept. The user's existing token stops working on
+        their next request. Idempotent. An admin cannot deactivate their own account (400).
+      security: [{ bearerAuth: [] }]
+      responses:
+        '204': { description: Deactivated (or already inactive). }
+        '400':
+          description: Attempt to deactivate your own account.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }

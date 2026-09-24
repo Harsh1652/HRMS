@@ -1,0 +1,23 @@
+# Dependencies / build
+node_modules/
+dist/
+coverage/
+
+# Environment — commit .env.example only
+.env
+.env.*
+!.env.example
+!.env.test.example
+
+# Graph indexes
+.code-review-graph/
+.codegraph/
+
+# Logs / OS / editor
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+
+# Backups
+*.bak

@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply bg-paper text-ink antialiased;
+    font-feature-settings: 'kern', 'liga', 'calt';
+  }
+
+  body {
+    @apply font-sans text-[15px] leading-6;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display font-medium tracking-tight text-ink;
+    font-variation-settings: 'opsz' 72;
+  }
+
+  ::selection {
+    @apply bg-accent-tint text-ink;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-paper;
+  }
+
+  input,
+  select,
+  textarea {
+    @apply bg-surface text-ink placeholder:text-ink-faint;
+  }
+}
+
+@layer components {
+  /* Small-caps style label used for table headers, field labels and eyebrows. */
+  .eyebrow {
+    @apply font-sans text-2xs font-semibold uppercase tracking-[0.08em] text-ink-muted;
+  }
+
+  .num {
+    @apply font-mono tabular-nums;
+  }
+}

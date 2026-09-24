@@ -1,0 +1,11 @@
+{
+  // Typechecks everything the build config leaves out: tests, seed, configs.
+  // Never used for emit — `npm run typecheck` runs both configs with --noEmit.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "tests/**/*.ts", "prisma/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}
