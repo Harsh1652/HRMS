@@ -1,4 +1,4 @@
-import { EmploymentStatus, type Prisma } from '@prisma/client';
+import { EmploymentStatus, Role, type Prisma } from '@prisma/client';
 import { prisma } from '../../utils/prisma';
 import { hashPassword } from '../../utils/password';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../../utils/AppError';
@@ -13,6 +13,7 @@ import {
   type UpdatableField,
 } from '../../policies/employeePolicy';
 import { employeeSelect, toEmployeeDto, type EmployeeDto, type EmployeeRow } from './employees.dto';
+import { assertDesignationFits, assertHasManager } from './employees.rules';
 import type { CreateEmployeeInput, ListQuery, UpdateEmployeeInput } from './employees.schemas';
 
 export interface EmployeeListResult {
@@ -125,9 +126,24 @@ async function assertValidManager(employeeId: string | null, managerId: string):
   }
 }
 
+const FIELD_LABELS: Record<UpdatableField, string> = {
+  firstName: 'first name',
+  lastName: 'last name',
+  email: 'email',
+  phone: 'phone',
+  department: 'department',
+  designation: 'designation',
+  joiningDate: 'joining date',
+  managerId: 'manager',
+  role: 'role',
+  status: 'status',
+};
+
 export async function create(actor: AuthenticatedUser, input: CreateEmployeeInput): Promise<EmployeeDto> {
   if (!canCreate(actor)) throw new ForbiddenError('Only an administrator can create employees');
 
+  assertDesignationFits(input.department, input.designation);
+  assertHasManager(input.role, input.managerId);
   if (input.managerId) await assertValidManager(null, input.managerId);
 
   const passwordHash = await hashPassword(input.password);
@@ -190,11 +206,20 @@ export async function update(
 
   if (denied.length > 0) {
     throw new ForbiddenError(
-      `You are not permitted to update: ${denied.join(', ')}`,
+      `You are not permitted to update: ${denied.map((field) => FIELD_LABELS[field]).join(', ')}`,
       denied.map((field) => ({ path: field, message: 'Not permitted for your role' })),
     );
   }
 
+  // Checked against the saved record, and only when the request touches these fields,
+  // so older rows that predate a rule can still be edited in other ways.
+  if (input.department !== undefined || input.designation !== undefined) {
+    assertDesignationFits(input.department ?? target.department, input.designation ?? target.designation);
+  }
+  if (input.role !== undefined || input.managerId !== undefined) {
+    const role = input.role ?? target.user?.role ?? Role.EMPLOYEE;
+    assertHasManager(role, input.managerId === undefined ? target.managerId : input.managerId);
+  }
   if (input.managerId) await assertValidManager(id, input.managerId);
 
   const employeeData: Prisma.EmployeeUpdateInput = {};

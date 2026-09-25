@@ -118,7 +118,6 @@ export function EmployeeDetailPage() {
               <KeyValue label="Status"><StatusBadge status={e.status} /></KeyValue>
               <KeyValue label="Login">{e.status === 'ACTIVE' ? 'Enabled' : <span className="text-clay">Disabled</span>}</KeyValue>
             </KeyValueList>
-            {canEdit && <p className="mt-3 text-[12px] text-ink-faint">You may edit: {[...editable].join(', ')}. Anything else is rejected by the API with a 403.</p>}
           </Panel>
         </div>
 

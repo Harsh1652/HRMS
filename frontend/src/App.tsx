@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from './auth/useAuth';
 import { fetchDashboardStats } from './api/dashboard';
@@ -9,6 +9,7 @@ import { Monogram } from './components/Monogram';
 export function AppShell() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [signingOut, setSigningOut] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const stats = useQuery({ queryKey: ['dashboard'], queryFn: fetchDashboardStats, enabled: !!user });
@@ -39,7 +40,7 @@ export function AppShell() {
       {canSeeDirectory && (
         <>
           <p className="eyebrow px-4 pb-1.5 pt-4">People</p>
-          <NavLink to="/employees" className={linkClass} onClick={close}>
+          <NavLink to="/employees" className={({ isActive }) => linkClass({ isActive: isActive && pathname !== '/employees/new' })} onClick={close}>
             <span>{user.role === 'ADMIN' ? 'Register' : 'My team'}</span>
             {stats.data && <span className="num text-[12px] text-ink-faint">{stats.data.total}</span>}
           </NavLink>

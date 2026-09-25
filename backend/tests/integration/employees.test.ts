@@ -22,8 +22,9 @@ const body = (overrides: Record<string, unknown> = {}) => {
     lastName: `Test${counter}`,
     email: `emp.test.${counter}.${Date.now()}@company.com`,
     department: 'Engineering',
-    designation: 'Engineer',
+    designation: 'Software Engineer',
     joiningDate: '2026-01-15',
+    managerId: 'EMP011',
     password: 'Welcome@12345',
     ...overrides,
   };
@@ -56,6 +57,10 @@ describe('POST /api/employees — validation', () => {
     ['bad role', { role: 'SUPERUSER' }],
     ['bad status', { status: 'FIRED' }],
     ['bad managerId format', { managerId: '10' }],
+    ['digits in firstName', { firstName: 'Emp1' }],
+    ['symbols in lastName', { lastName: 'Inc)' }],
+    ['unknown department', { department: 'Ops' }],
+    ['unknown designation', { designation: 'Wizard' }],
     ['unknown key', { id: 'EMP001' }],
     ['unknown key (passwordHash)', { passwordHash: 'x' }],
   ])('rejects %s → 400', async (_label, overrides) => {
@@ -100,9 +105,26 @@ describe('POST /api/employees — behaviour', () => {
     expect(nb).toBeGreaterThan(na);
   });
 
-  it('applies defaults: role EMPLOYEE, status ACTIVE, no manager, no phone', async () => {
+  it('applies defaults: role EMPLOYEE, status ACTIVE, no phone', async () => {
     const { employee } = await createOne();
-    expect(employee).toMatchObject({ role: 'EMPLOYEE', status: 'ACTIVE', managerId: null, manager: null, phone: null });
+    expect(employee).toMatchObject({ role: 'EMPLOYEE', status: 'ACTIVE', phone: null });
+  });
+
+  it('rejects a non-admin without a manager → 400 naming managerId', async () => {
+    const res = await post(body({ managerId: null }));
+    expect(res.status).toBe(400);
+    expect(res.body.error.details).toEqual([{ path: 'managerId', message: expect.any(String) }]);
+  });
+
+  it('allows an ADMIN without a manager', async () => {
+    const { employee } = await createOne({ role: 'ADMIN', managerId: null });
+    expect(employee).toMatchObject({ role: 'ADMIN', managerId: null });
+  });
+
+  it('rejects a designation from another department → 400 naming designation', async () => {
+    const res = await post(body({ department: 'Finance', designation: 'Software Engineer' }));
+    expect(res.status).toBe(400);
+    expect(res.body.error.details).toEqual([{ path: 'designation', message: expect.any(String) }]);
   });
 
   it('creates the User in the same transaction with the right role and isActive', async () => {
@@ -183,15 +205,29 @@ describe('PUT /api/employees/:id — validation', () => {
 describe('PUT /api/employees/:id — behaviour', () => {
   it('updates only the fields sent', async () => {
     const { id, employee } = await createOne();
-    const res = await put(id, { designation: 'Staff Engineer' });
+    const res = await put(id, { designation: 'Senior Software Engineer' });
     expect(res.status).toBe(200);
-    expect(res.body.employee.designation).toBe('Staff Engineer');
+    expect(res.body.employee.designation).toBe('Senior Software Engineer');
     expect(res.body.employee.firstName).toBe(employee.firstName);
     expect(res.body.employee.department).toBe(employee.department);
   });
 
-  it('clears the manager with managerId: null', async () => {
-    const { id } = await createOne({ managerId: SEED.manager.employeeId });
+  it('refuses to clear the manager of a non-admin → 400', async () => {
+    const { id } = await createOne();
+    const res = await put(id, { managerId: null });
+    expect(res.status).toBe(400);
+    expect(res.body.error.details).toEqual([{ path: 'managerId', message: expect.any(String) }]);
+  });
+
+  it('refuses a department change that leaves the designation in the wrong department → 400', async () => {
+    const { id } = await createOne();
+    const res = await put(id, { department: 'Finance' });
+    expect(res.status).toBe(400);
+    expect(res.body.error.details).toEqual([{ path: 'designation', message: expect.any(String) }]);
+  });
+
+  it('clears the manager of an ADMIN with managerId: null', async () => {
+    const { id } = await createOne({ role: 'ADMIN' });
     const res = await put(id, { managerId: null });
     expect(res.status).toBe(200);
     expect(res.body.employee.managerId).toBeNull();
@@ -252,9 +288,9 @@ describe('PUT /api/employees/:id — behaviour', () => {
 
 describe('GET /api/employees — created rows appear in filters', () => {
   it('a created INACTIVE employee shows up under status=INACTIVE and not under ACTIVE', async () => {
-    const { id } = await createOne({ status: 'INACTIVE', department: 'Ops' });
-    const inactive = await get('/api/employees?status=INACTIVE&department=Ops&limit=100');
-    const active = await get('/api/employees?status=ACTIVE&department=Ops&limit=100');
+    const { id } = await createOne({ status: 'INACTIVE', department: 'Marketing', designation: 'Copywriter' });
+    const inactive = await get('/api/employees?status=INACTIVE&department=Marketing&limit=100');
+    const active = await get('/api/employees?status=ACTIVE&department=Marketing&limit=100');
     expect(inactive.body.items.map((e: { id: string }) => e.id)).toContain(id);
     expect(active.body.items.map((e: { id: string }) => e.id)).not.toContain(id);
   });

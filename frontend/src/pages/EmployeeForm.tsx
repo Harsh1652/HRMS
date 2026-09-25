@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -15,19 +15,22 @@ import { Spinner } from '../components/Spinner';
 import { ErrorBanner } from '../components/ErrorBanner';
 import { SelectField, TextField } from '../components/FormField';
 import { editableFieldsFor, type EditableField } from '../lib/permissions';
-import { keepDigits, PHONE_PATTERN } from '../lib/input';
+import { keepDigits, keepNameCharacters, NAME_PATTERN, PHONE_PATTERN } from '../lib/input';
+import { DEPARTMENTS, DESIGNATIONS_BY_DEPARTMENT } from '../lib/catalog';
 import type { ApiError, CreateEmployeeInput, Employee, UpdateEmployeeInput } from '../types/api';
 
 const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD');
 const optionalPhone = z.string().trim().regex(PHONE_PATTERN, 'Enter a 10-digit phone number').or(z.literal(''));
 
+const nameField = z.string().trim().min(1, 'Required').max(80).regex(NAME_PATTERN, 'Use letters only');
+
 const baseSchema = z.object({
-  firstName: z.string().trim().min(1, 'Required').max(80),
-  lastName: z.string().trim().min(1, 'Required').max(80),
+  firstName: z.string(),
+  lastName: z.string(),
   email: z.string().trim().min(1, 'Required').email('Enter a valid email'),
   phone: optionalPhone,
-  department: z.string().trim().min(1, 'Required').max(100),
-  designation: z.string().trim().min(1, 'Required').max(100),
+  department: z.string(),
+  designation: z.string(),
   joiningDate: dateOnly,
   managerId: z.string(),
   role: z.enum(['ADMIN', 'MANAGER', 'EMPLOYEE']),
@@ -36,7 +39,27 @@ const baseSchema = z.object({
 });
 type FormValues = z.infer<typeof baseSchema>;
 
-const createSchema = baseSchema.extend({ password: z.string().min(10, 'At least 10 characters').max(200) });
+const designationsFor = (department: string) => DESIGNATIONS_BY_DEPARTMENT[department] ?? [];
+
+// Fields the user can't change are not validated, so older records with values
+// that predate these rules can still be saved.
+function buildSchema(isCreate: boolean, can: (field: EditableField) => boolean) {
+  return baseSchema
+    .extend({
+      firstName: can('firstName') ? nameField : z.string(),
+      lastName: can('lastName') ? nameField : z.string(),
+      department: can('department') ? z.string().refine((d) => DEPARTMENTS.includes(d), 'Choose a department') : z.string(),
+      password: isCreate ? z.string().min(10, 'At least 10 characters').max(200) : z.string(),
+    })
+    .superRefine((v, ctx) => {
+      if (can('designation') && !designationsFor(v.department).includes(v.designation)) {
+        ctx.addIssue({ code: 'custom', path: ['designation'], message: 'Choose a designation for this department' });
+      }
+      if ((can('managerId') || can('role')) && v.role !== 'ADMIN' && !v.managerId) {
+        ctx.addIssue({ code: 'custom', path: ['managerId'], message: 'Choose a manager. Only HR / Admin can have none.' });
+      }
+    });
+}
 
 function toDefaults(e?: Employee): FormValues {
   return {
@@ -97,10 +120,13 @@ function EmployeeFormInner({ employee }: { employee?: Employee }) {
     enabled: can('managerId'),
   });
 
+  const schema = useMemo(() => buildSchema(isCreate, (f) => editable.has(f)), [isCreate, editable]);
   const form = useForm<FormValues>({
-    resolver: zodResolver(isCreate ? createSchema : baseSchema),
+    resolver: zodResolver(schema),
     defaultValues: toDefaults(employee),
   });
+  const [department, designation, role] = useWatch({ control: form.control, name: ['department', 'designation', 'role'] });
+  const designationOptions = designationsFor(department);
 
   const mutation = useMutation({
     mutationFn: async (values: FormValues) => {
@@ -171,8 +197,8 @@ function EmployeeFormInner({ employee }: { employee?: Employee }) {
 
         <Panel eyebrow="Person" title="Name and contact" className="mt-4">
           <fieldset className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <TextField label="First name" disabled={!can('firstName')} hint={!can('firstName') ? disabledNote : undefined} error={errors.firstName?.message} {...form.register('firstName')} />
-          <TextField label="Last name" disabled={!can('lastName')} hint={!can('lastName') ? disabledNote : undefined} error={errors.lastName?.message} {...form.register('lastName')} />
+          <TextField label="First name" autoComplete="given-name" onInput={keepNameCharacters} disabled={!can('firstName')} hint={!can('firstName') ? disabledNote : 'Letters only'} error={errors.firstName?.message} {...form.register('firstName')} />
+          <TextField label="Last name" autoComplete="family-name" onInput={keepNameCharacters} disabled={!can('lastName')} hint={!can('lastName') ? disabledNote : 'Letters only'} error={errors.lastName?.message} {...form.register('lastName')} />
           <TextField label="Email" type="email" disabled={!can('email')} hint={!can('email') ? disabledNote : isCreate ? 'Also the login email' : 'Changing this changes the login'} error={errors.email?.message} {...form.register('email')} />
           <TextField label="Phone" mono inputMode="numeric" maxLength={10} placeholder="9845000000" onInput={keepDigits} disabled={!can('phone')} hint={!can('phone') ? disabledNote : 'Optional, 10 digits'} error={errors.phone?.message} {...form.register('phone')} />
           </fieldset>
@@ -180,11 +206,32 @@ function EmployeeFormInner({ employee }: { employee?: Employee }) {
 
         <Panel eyebrow="Position" title="Where they sit" className="mt-5">
           <fieldset className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <TextField label="Department" disabled={!can('department')} hint={!can('department') ? disabledNote : undefined} error={errors.department?.message} {...form.register('department')} />
-          <TextField label="Designation" disabled={!can('designation')} hint={!can('designation') ? disabledNote : undefined} error={errors.designation?.message} {...form.register('designation')} />
+          <SelectField
+            label="Department"
+            disabled={!can('department')}
+            hint={!can('department') ? disabledNote : undefined}
+            error={errors.department?.message}
+            {...form.register('department', {
+              // A new department usually means a new designation list; clear a designation that no longer fits.
+              onChange: (event) => {
+                if (!designationsFor(event.target.value).includes(form.getValues('designation'))) {
+                  form.setValue('designation', '', { shouldDirty: true });
+                }
+              },
+            })}
+          >
+            <option value="" disabled>Select a department</option>
+            {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
+            {department && !DEPARTMENTS.includes(department) && <option value={department}>{department}</option>}
+          </SelectField>
+          <SelectField label="Designation" disabled={!can('designation') || !department} hint={!can('designation') ? disabledNote : !department ? 'Pick a department first' : undefined} error={errors.designation?.message} {...form.register('designation')}>
+            <option value="" disabled>Select a designation</option>
+            {designationOptions.map((d) => <option key={d} value={d}>{d}</option>)}
+            {designation && !designationOptions.includes(designation) && <option value={designation}>{designation}</option>}
+          </SelectField>
           <TextField label="Joining date" type="date" mono disabled={!can('joiningDate')} hint={!can('joiningDate') ? disabledNote : undefined} error={errors.joiningDate?.message} {...form.register('joiningDate')} />
-          <SelectField label="Reports to" disabled={!can('managerId')} hint={!can('managerId') ? disabledNote : managers.isPending ? 'Loading…' : undefined} error={errors.managerId?.message} {...form.register('managerId')}>
-            <option value="">— No manager —</option>
+          <SelectField label="Reports to" disabled={!can('managerId')} hint={!can('managerId') ? disabledNote : managers.isPending ? 'Loading…' : role === 'ADMIN' ? 'Optional for HR / Admin' : 'Required'} error={errors.managerId?.message} {...form.register('managerId')}>
+            <option value="">{role === 'ADMIN' ? '— No manager —' : 'Select a manager'}</option>
             {managers.data?.items.filter((m) => m.id !== employee?.id).map((m) => (
               <option key={m.id} value={m.id}>{m.firstName} {m.lastName} · {m.id}</option>
             ))}

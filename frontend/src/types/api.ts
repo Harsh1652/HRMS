@@ -67,6 +67,15 @@ export interface CreateEmployeeInput {
 
 export type UpdateEmployeeInput = Partial<Omit<CreateEmployeeInput, 'password'>>;
 
+export interface RecentJoiner {
+  id: string;
+  firstName: string;
+  lastName: string;
+  department: string;
+  designation: string;
+  joiningDate: string;
+}
+
 export interface DashboardStats {
   total: number;
   active: number;

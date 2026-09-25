@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { EmploymentStatus, Role } from '@prisma/client';
+import { DEPARTMENTS, DESIGNATIONS } from './employees.catalog';
 
 export const employeeIdSchema = z.string().regex(/^EMP\d{3,}$/, 'Employee id must look like EMP001');
 
@@ -25,8 +26,15 @@ const dateOnly = z
     return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
   }, 'Not a real calendar date');
 
-const name = z.string().trim().min(1).max(80);
-const label = z.string().trim().min(1).max(100);
+// Letters only; a single space, hyphen or apostrophe may join parts (De Souza, Mary-Jane, O'Brien).
+const name = z
+  .string()
+  .trim()
+  .min(1)
+  .max(80)
+  .regex(/^[A-Za-z]+(?:[ '-][A-Za-z]+)*$/, 'Use letters only');
+const department = z.enum(DEPARTMENTS, { errorMap: () => ({ message: `Must be one of: ${DEPARTMENTS.join(', ')}` }) });
+const designation = z.enum(DESIGNATIONS, { errorMap: () => ({ message: 'Not a known designation' }) });
 const phone = z.string().trim().regex(/^\d{10}$/, 'Phone must be exactly 10 digits');
 
 export const createEmployeeSchema = z
@@ -35,8 +43,8 @@ export const createEmployeeSchema = z
     lastName: name,
     email: z.string().trim().toLowerCase().email(),
     phone: phone.nullable().optional(),
-    department: label,
-    designation: label,
+    department,
+    designation,
     joiningDate: dateOnly,
     managerId: employeeIdSchema.nullable().optional(),
     role: z.nativeEnum(Role).default('EMPLOYEE'),
@@ -51,8 +59,8 @@ export const updateEmployeeSchema = z
     lastName: name.optional(),
     email: z.string().trim().toLowerCase().email().optional(),
     phone: phone.nullable().optional(),
-    department: label.optional(),
-    designation: label.optional(),
+    department: department.optional(),
+    designation: designation.optional(),
     joiningDate: dateOnly.optional(),
     managerId: employeeIdSchema.nullable().optional(),
     role: z.nativeEnum(Role).optional(),

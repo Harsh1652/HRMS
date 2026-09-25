@@ -22,7 +22,7 @@ To run it locally, follow [SETUP.md](SETUP.md).
 - **Create employee** (Admin). Creates the employee record and their login in one transaction, with an auto-generated ID (`EMP100`, `EMP101`, …).
 - **Edit employee** with field-level rules. Employees may edit their own phone number; managers may edit a direct report's designation and department; Admin may edit any field.
 - **Soft delete** (Admin). Marks the employee `INACTIVE` and disables their login immediately.
-- **Dashboard** with total, active and inactive counts and a per-department breakdown, limited to the caller's scope.
+- **Dashboard** with total, active and inactive counts and a per-department breakdown, limited to the caller's scope, plus a company-wide **Recent joiners** list (directory fields only).
 - **API docs** in Swagger UI and an OpenAPI 3.0 spec.
 - **Responsive UI** that works at phone width.
 
@@ -120,6 +120,7 @@ Policy functions ([`employeePolicy.ts`](backend/src/policies/employeePolicy.ts))
 
 - **Object level.** Single-record lookups use `findFirst({ where: { id, AND: scopeWhere(actor) } })`. Lists and dashboard counts use the same `scopeWhere`, applied in SQL.
 - **Field level (mass assignment).** `PUT` bodies are validated with a `.strict()` Zod schema, so unknown keys return 400. Every remaining key is then checked against `updatableFields`. If any key is not allowed, the request returns **403 naming that field** and no change is applied. `req.body` is never passed to Prisma.
+- **One deliberate exception.** `GET /dashboard/recent-joiners` shows every signed-in user the five newest active joiners, with name, department, designation and joining date only. It returns no contact details, manager, role or status, and opening any of those people with `GET /employees/{id}` still returns 403 for callers outside their scope.
 - **403 vs 404.** An `ADMIN` who requests an ID that does not exist gets **404**. Any other role that requests an ID outside its scope gets **403**, whether or not the ID exists. Both 403 responses have the same body, so callers cannot tell which IDs exist.
 
 | Situation | Status |
@@ -178,6 +179,7 @@ All routes are under `/api`. Every route except login and docs requires `Authori
 | `PUT` | `/employees/{id}` | per field | Partial update. A field the caller may not change returns 403 naming it |
 | `DELETE` | `/employees/{id}` | ADMIN | 204. Soft delete |
 | `GET` | `/dashboard/stats` | any role | `{ total, active, inactive, byDepartment[] }`, scoped |
+| `GET` | `/dashboard/recent-joiners` | any role | Five newest active joiners, the same for everyone. Name, department, designation and joining date only |
 | `GET` | `/health` (root, not `/api`) | anyone | Liveness check |
 
 Every error uses the same body: `{ "error": { "code", "message", "details"? } }`.
@@ -317,12 +319,12 @@ From `backend/`:
 ```bash
 npm run test:unit
 ```
-Runs **46** unit tests that need no database. They cover every branch of the authorization policy and the error handler.
+Runs **69** unit tests that need no database. They cover every branch of the authorization policy, the error handler, and the field rules (names, phone, department and designation, manager requirement).
 
 ```bash
 npm test
 ```
-Runs the unit tests plus **116** integration tests that go through the real HTTP stack against the `test` schema: auth (17), authorization (57, including the six required scenarios), employee behaviour (30) and dashboard (6). Each run first rebuilds the `test` schema **from the migration files** and seeds it, so it also checks the migrations. A run takes 2–4 minutes against a remote database.
+Runs the unit tests plus the integration tests, which go through the real HTTP stack against the `test` schema. They cover auth, authorization (including the six required scenarios), employee behaviour and the dashboard. Each run first rebuilds the `test` schema **from the migration files** and seeds it, so it also checks the migrations. A run takes 2–4 minutes against a remote database.
 
 ## 14. Design Decisions / Trade-offs
 

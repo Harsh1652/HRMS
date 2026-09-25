@@ -90,3 +90,39 @@ describe('GET /api/dashboard/stats', () => {
     expect(departments).not.toContain('Finance');
   });
 });
+
+describe('GET /api/dashboard/recent-joiners', () => {
+  const recent = (token: string) => request(app).get('/api/dashboard/recent-joiners').set(bearer(token));
+
+  it('returns the same list to every role', async () => {
+    const [admin, manager, employee] = await Promise.all(
+      (['admin', 'manager', 'employee1'] as const).map(async (who) => (await recent(await loginAs(who))).body.items),
+    );
+    expect(admin.length).toBeGreaterThan(0);
+    expect(manager).toEqual(admin);
+    expect(employee).toEqual(admin);
+  });
+
+  it('exposes only directory fields, newest active joiners first', async () => {
+    const res = await recent(await loginAs('employee1'));
+    expect(res.status).toBe(200);
+    for (const item of res.body.items) {
+      expect(Object.keys(item).sort()).toEqual(['department', 'designation', 'firstName', 'id', 'joiningDate', 'lastName']);
+    }
+    const dates = res.body.items.map((i: { joiningDate: string }) => i.joiningDate);
+    expect([...dates].sort().reverse()).toEqual(dates);
+    const inactive = await prisma.employee.findMany({ where: { status: 'INACTIVE' }, select: { id: true } });
+    const ids = res.body.items.map((i: { id: string }) => i.id);
+    for (const { id } of inactive) expect(ids).not.toContain(id);
+  });
+
+  it('does not open up full records', async () => {
+    const token = await loginAs('employee1');
+    const other = (await recent(token)).body.items.find((i: { id: string }) => i.id !== SEED.employee1.employeeId);
+    if (other) expect((await request(app).get(`/api/employees/${other.id}`).set(bearer(token))).status).toBe(403);
+  });
+
+  it('requires a token', async () => {
+    expect((await request(app).get('/api/dashboard/recent-joiners')).status).toBe(401);
+  });
+});

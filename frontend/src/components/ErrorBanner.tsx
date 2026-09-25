@@ -1,4 +1,5 @@
 import type { ApiError } from '../types/api';
+import { FIELD_LABELS } from '../lib/catalog';
 
 export function ErrorBanner({ error, title }: { error: ApiError | string | null | undefined; title?: string }) {
   if (!error) return null;
@@ -11,7 +12,7 @@ export function ErrorBanner({ error, title }: { error: ApiError | string | null 
         <ul className="mt-1.5 list-disc pl-5 text-[13px] text-ink-muted">
           {apiError.details.map((d) => (
             <li key={`${d.path}-${d.message}`}>
-              <span className="font-mono text-ink">{d.path}</span> — {d.message}
+              <span className="font-semibold text-ink">{FIELD_LABELS[d.path] ?? d.path}</span>: {d.message}
             </li>
           ))}
         </ul>

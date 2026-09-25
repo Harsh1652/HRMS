@@ -124,14 +124,14 @@ components:
       additionalProperties: false
       description: The id is generated server-side. Creates the employee and their login together.
       properties:
-        firstName: { type: string, maxLength: 80, example: Tara }
-        lastName: { type: string, maxLength: 80, example: Bhat }
+        firstName: { type: string, maxLength: 80, pattern: "^[A-Za-z]+(?:[ '-][A-Za-z]+)*$", example: Tara }
+        lastName: { type: string, maxLength: 80, pattern: "^[A-Za-z]+(?:[ '-][A-Za-z]+)*$", example: Bhat }
         email: { type: string, format: email, example: tara.bhat@company.com }
         phone: { type: string, nullable: true, pattern: '^\d{10}$', example: '9845000100' }
-        department: { type: string, maxLength: 100, example: Engineering }
-        designation: { type: string, maxLength: 100, example: QA Engineer }
+        department: { type: string, enum: [Engineering, Finance, HR, Marketing, Sales], example: Engineering }
+        designation: { type: string, description: 'Must belong to the department. Engineering: Engineering Manager, Senior Software Engineer, Software Engineer, DevOps Engineer, QA Engineer. Finance: Finance Manager, Senior Accountant, Financial Analyst, Payroll Specialist. HR: Head of People, HR Business Partner, HR Executive, Recruiter. Marketing: Marketing Lead, Content Strategist, Designer, Copywriter. Sales: Sales Manager, Account Executive, Sales Development Rep.', example: QA Engineer }
         joiningDate: { type: string, format: date, example: '2026-10-01' }
-        managerId: { type: string, nullable: true, example: EMP010 }
+        managerId: { type: string, nullable: true, description: Required unless role is ADMIN, example: EMP010 }
         role: { $ref: '#/components/schemas/Role' }
         status: { $ref: '#/components/schemas/EmploymentStatus' }
         password:
@@ -151,12 +151,12 @@ components:
         to the target; a disallowed key → 403 naming it,
         and nothing is applied. Changing `email` or `status` also updates the login.
       properties:
-        firstName: { type: string, maxLength: 80 }
-        lastName: { type: string, maxLength: 80 }
+        firstName: { type: string, maxLength: 80, pattern: "^[A-Za-z]+(?:[ '-][A-Za-z]+)*$" }
+        lastName: { type: string, maxLength: 80, pattern: "^[A-Za-z]+(?:[ '-][A-Za-z]+)*$" }
         email: { type: string, format: email }
         phone: { type: string, nullable: true, pattern: '^\d{10}$', example: '9845000001' }
-        department: { type: string, maxLength: 100 }
-        designation: { type: string, maxLength: 100, example: Senior Software Engineer }
+        department: { type: string, enum: [Engineering, Finance, HR, Marketing, Sales] }
+        designation: { type: string, description: 'Must belong to the department. Engineering: Engineering Manager, Senior Software Engineer, Software Engineer, DevOps Engineer, QA Engineer. Finance: Finance Manager, Senior Accountant, Financial Analyst, Payroll Specialist. HR: Head of People, HR Business Partner, HR Executive, Recruiter. Marketing: Marketing Lead, Content Strategist, Designer, Copywriter. Sales: Sales Manager, Account Executive, Sales Development Rep.', example: Senior Software Engineer }
         joiningDate: { type: string, format: date }
         managerId: { type: string, nullable: true }
         role: { $ref: '#/components/schemas/Role' }
@@ -325,6 +325,37 @@ paths:
                     active: 1
                     inactive: 0
                     byDepartment: [{ department: Engineering, count: 1 }]
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /dashboard/recent-joiners:
+    get:
+      tags: [Dashboard]
+      summary: Latest active joiners, the same for every role
+      description: |
+        A deliberate, narrow exception to per-role scoping. Every signed-in user gets the five
+        most recently joined ACTIVE employees, with directory fields only (name, department,
+        designation, joining date). Email, phone, manager, role and status are not included, and
+        `GET /employees/{id}` for anyone outside the caller's scope still returns **403**.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Newest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, example: EMP015 }
+                        firstName: { type: string, example: Lakshmi }
+                        lastName: { type: string, example: Pillai }
+                        department: { type: string, example: Marketing }
+                        designation: { type: string, example: Designer }
+                        joiningDate: { type: string, format: date, example: '2024-02-05' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
   /me:

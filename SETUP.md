@@ -286,13 +286,13 @@ From `backend/`:
 npm run test:unit
 ```
 
-This runs 46 unit tests covering every branch of the authorization policy and the error handler. It needs no database or `.env`.
+This runs 69 unit tests covering every branch of the authorization policy, the error handler and the field validation rules. It needs no database or `.env`.
 
 ```bash
 npm test
 ```
 
-This adds 116 integration tests that go through the real HTTP stack, including all six scenarios above. They need `backend/.env.test`:
+This adds the integration tests, which go through the real HTTP stack, including all six scenarios above. They need `backend/.env.test`:
 
 ```bash
 cp .env.test.example .env.test
