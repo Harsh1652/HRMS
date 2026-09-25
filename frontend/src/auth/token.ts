@@ -1,6 +1,6 @@
 /**
  * Access-token store: memory first, mirrored to sessionStorage so a page refresh
- * keeps the session but closing the tab ends it (CLAUDE.md frontend rules).
+ * keeps the session but closing the tab ends it.
  *
  * The JWT's `exp` is decoded client-side so the app can log out on its own
  * clock instead of waiting for the next 401. The server remains the real guard.

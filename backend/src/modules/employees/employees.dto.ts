@@ -2,7 +2,7 @@ import type { EmploymentStatus, Prisma, Role } from '@prisma/client';
 
 /**
  * The one Prisma `select` used for every employee read. Explicit so that a new
- * column (or `passwordHash`, ever) cannot leak by default (CLAUDE.md rule 8).
+ * column (or `passwordHash`, ever) cannot leak by default.
  */
 export const employeeSelect = {
   id: true,

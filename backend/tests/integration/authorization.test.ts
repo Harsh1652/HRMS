@@ -1,6 +1,6 @@
 /**
  * The mandatory authorization scenarios from docs/spec.md §9, plus the extra
- * cases CLAUDE.md requires. Each block names the spec test it covers.
+ * cases the access model requires. Each block names the spec test it covers.
  *
  * Status-code rule under test (D-005): object-level denial is 403. ADMIN gets
  * 404 for an id that does not exist; every other role gets 403 for any id

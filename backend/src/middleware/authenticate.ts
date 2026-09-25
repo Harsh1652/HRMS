@@ -24,7 +24,7 @@ declare global {
  * Rejects the request unless it carries a valid `Authorization: Bearer <token>`
  * for a user who is still active.
  *
- * The `isActive` re-check (CLAUDE.md rule 2) costs one indexed lookup per
+ * The `isActive` re-check costs one indexed lookup per
  * request and is what makes soft-delete take effect immediately instead of
  * whenever the deactivated user's token happens to expire.
  */

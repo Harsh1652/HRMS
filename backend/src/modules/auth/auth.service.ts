@@ -21,7 +21,7 @@ export interface LoginResult {
 /**
  * A real bcrypt hash of a random string. When the email is unknown we still run
  * a compare against it so the response time does not reveal whether the account
- * exists (CLAUDE.md rule 9 covers the message; this covers the timing).
+ * exists (the identical error message covers the wording; this covers the timing).
  */
 const HASH = '$2b$12$Rszk84Gdbqhxg3hLnZtRMOLnCvdQVU2f9RenZ8nI1FXcFzcj6B/9u';
 

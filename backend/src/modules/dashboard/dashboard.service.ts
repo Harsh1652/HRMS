@@ -11,9 +11,8 @@ export interface DashboardStats {
 }
 
 /**
- * Headline numbers for the dashboard, scoped to what the caller may see
- * (CLAUDE.md rule 5): every count and the grouping carry `scopeWhere(actor)`
- * inside the query. An EMPLOYEE therefore sees 1 / 1 / their own department;
+ * Headline numbers for the dashboard, scoped to what the caller may see:
+ * every count and the grouping carry `scopeWhere(actor)` inside the query. An EMPLOYEE therefore sees 1 / 1 / their own department;
  * a MANAGER sees their team; ADMIN sees the company.
  */
 export async function stats(actor: AuthenticatedUser): Promise<DashboardStats> {

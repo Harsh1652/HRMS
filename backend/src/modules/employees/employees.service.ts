@@ -27,7 +27,7 @@ export interface EmployeeListResult {
 /**
  * Scoped list. The policy's `scopeWhere` is AND-ed with the caller's filters
  * inside the query, so a filter can only narrow what the actor already sees —
- * never widen it (CLAUDE.md rule 5).
+ * never widen it.
  */
 export async function list(actor: AuthenticatedUser, query: ListQuery): Promise<EmployeeListResult> {
   const filters: Prisma.EmployeeWhereInput[] = [];
@@ -203,7 +203,7 @@ export async function create(actor: AuthenticatedUser, input: CreateEmployeeInpu
 }
 
 /**
- * Partial update with the mass-assignment guard (CLAUDE.md rule 6, D-007):
+ * Partial update with the mass-assignment guard (D-007):
  *   1. the target is loaded through the same scoped path as a read (403/404),
  *   2. every submitted key is checked against `updatableFields(actor, target)`,
  *   3. any key outside that set fails the whole request with 403 and names the
@@ -267,7 +267,7 @@ export async function update(
 }
 
 /**
- * Soft delete (CLAUDE.md rule 7): `Employee.status = INACTIVE` and
+ * Soft delete: `Employee.status = INACTIVE` and
  * `User.isActive = false` in one transaction. `authenticate` re-reads
  * `isActive` on every request, so the user's current token stops working on
  * their next call. Idempotent — deactivating an inactive employee is a no-op 204.

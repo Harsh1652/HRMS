@@ -42,7 +42,7 @@ interface SeedEmployee {
 
 // Ordered so that every managerId refers to a row created earlier in the list.
 const EMPLOYEES: SeedEmployee[] = [
-  // --- Login accounts (docs/spec.md §8, CLAUDE.md "Seed users") ------------
+  // --- Login accounts (assignment brief §8) ------------
   {
     id: 'EMP000', firstName: 'Asha', lastName: 'Menon', email: 'admin@company.com',
     phone: '+91-98450-00000', department: 'HR', designation: 'Head of People',

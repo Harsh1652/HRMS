@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 
-/** Cost 12 per CLAUDE.md. ~250ms per hash on commodity hardware. */
+/** bcrypt cost 12: ~250ms per hash on commodity hardware. */
 const SALT_ROUNDS = 12;
 
 export function hashPassword(plain: string): Promise<string> {

@@ -11,7 +11,7 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { apiRouter } from './routes';
 
 /**
- * The OpenAPI document is hand-written (CLAUDE.md) and is the API contract.
+ * The OpenAPI document is hand-written and is the API contract.
  * Resolved relative to this file so it works from both src/ (tsx) and dist/.
  */
 function loadOpenApiSpec(): Record<string, unknown> {
@@ -43,7 +43,7 @@ export function createApp(): Express {
     res.status(200).json({ status: 'ok', uptime: process.uptime() });
   });
 
-  // API docs are deliberately public (CLAUDE.md rule 2). Helmet's default CSP
+  // API docs are deliberately public. Helmet's default CSP
   // blocks Swagger UI's inline scripts, so it is relaxed for this path only.
   app.get('/api/docs.json', (_req, res) => {
     res.status(200).json(openApiSpec);

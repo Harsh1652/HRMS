@@ -6,7 +6,7 @@ import { Role, type Prisma } from '@prisma/client';
  * These are pure functions over two small shapes — the caller (from the verified
  * JWT) and the target row — so they can be unit-tested with no database, and so
  * a reviewer can read the whole access model in one file. Nothing else in
- * `src/` is allowed to branch on `role` (CLAUDE.md security rule 3).
+ * `src/` is allowed to branch on `role`.
  *
  * The rules, in prose (docs/AUTHORIZATION.md must match this file exactly):
  *
@@ -115,7 +115,7 @@ export function updatableFields(actor: Actor, target: Target): ReadonlySet<Updat
 
 /**
  * The Prisma `where` fragment that limits any list, count or lookup to what the
- * actor may see. Applied inside the database query (CLAUDE.md rule 5) — never
+ * actor may see. Applied inside the database query — never
  * as a JavaScript filter over a broader result.
  */
 export function scopeWhere(actor: Actor): Prisma.EmployeeWhereInput {

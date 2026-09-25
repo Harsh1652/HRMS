@@ -4,7 +4,7 @@ import { env } from '../config/env';
 
 /**
  * What a verified token proves about the caller. This is the ONLY source of
- * identity in the API (CLAUDE.md security rule 1). `authenticate` copies it onto
+ * identity in the API. `authenticate` copies it onto
  * `req.user`; nothing downstream reads ids or roles from the request body.
  */
 export interface AccessTokenPayload {

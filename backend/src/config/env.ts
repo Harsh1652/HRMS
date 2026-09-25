@@ -4,7 +4,7 @@ import { z } from 'zod';
 /**
  * Environment is validated once, at boot. A missing or malformed variable should
  * crash the process immediately rather than surface as a confusing 500 later.
- * CLAUDE.md rule 10: secrets and config come only from here.
+ * Secrets and config come only from here.
  */
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
