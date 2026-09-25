@@ -8,10 +8,6 @@ import { EmployeeListPage } from './pages/EmployeeList';
 import { EmployeeDetailPage } from './pages/EmployeeDetail';
 import { EmployeeFormPage } from './pages/EmployeeForm';
 
-/**
- * Route tree. Guards here keep the UI honest for each role; the API applies
- * the same rules to every request regardless of what the client renders.
- */
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
   {

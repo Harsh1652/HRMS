@@ -1,19 +1,7 @@
 /**
- * Seed data for development and tests.
- *
- * Five login accounts (password `Password@123`) plus eleven non-login employees
- * (16 rows, EMP000–EMP015) so the dashboard and filters have something to show.
- * Every Employee gets a User (D-003); the non-login ones get an unpublished
- * random password.
- *
- * Idempotent: employees upsert on `id`, users upsert on `email`. Re-running
- * resets the five known passwords and re-links managers, so a broken dev DB is
- * one `npx prisma db seed` away from the documented state.
- *
- * Reporting lines matter for the authorization tests — do not change them
- * without updating tests/authorization.test.ts and docs/AUTHORIZATION.md:
+ * The authorization tests depend on these reporting lines:
  *   EMP010 (manager@) manages exactly EMP001 and EMP002.
- *   EMP003 reports to EMP000 and is therefore OUTSIDE manager@'s team.
+ *   EMP003 reports to EMP000, so is outside manager@'s team.
  */
 import { randomBytes } from 'node:crypto';
 import { EmploymentStatus, PrismaClient, Role } from '@prisma/client';
@@ -32,17 +20,14 @@ interface SeedEmployee {
   phone: string | null;
   department: string;
   designation: string;
-  joiningDate: string; // YYYY-MM-DD
+  joiningDate: string;
   status: EmploymentStatus;
   managerId: string | null;
   role: Role;
-  /** Only the five documented accounts have a known password. */
   login: boolean;
 }
 
-// Ordered so that every managerId refers to a row created earlier in the list.
 const EMPLOYEES: SeedEmployee[] = [
-  // --- Login accounts (assignment brief §8) ------------
   {
     id: 'EMP000', firstName: 'Asha', lastName: 'Menon', email: 'admin@company.com',
     phone: '+91-98450-00000', department: 'HR', designation: 'Head of People',
@@ -74,7 +59,6 @@ const EMPLOYEES: SeedEmployee[] = [
     role: Role.EMPLOYEE, login: true,
   },
 
-  // --- Non-login employees --------------------------------------------------
   {
     id: 'EMP011', firstName: 'Kavya', lastName: 'Reddy', email: 'kavya.reddy@company.com',
     phone: '+91-98450-00011', department: 'Sales', designation: 'Sales Manager',
@@ -143,11 +127,6 @@ const EMPLOYEES: SeedEmployee[] = [
   },
 ];
 
-/**
- * Hosted Postgres occasionally refuses the first connection right after a
- * schema reset (seen on Supabase when the test runner pushes then seeds within
- * seconds). A few bounded retries keep `npm test` from failing on that alone.
- */
 async function connectWithRetry(attempts = 5, delayMs = 2000): Promise<void> {
   for (let attempt = 1; ; attempt += 1) {
     try {
@@ -174,8 +153,6 @@ async function main(): Promise<void> {
       update: { ...employee, joiningDate: new Date(joiningDate) },
     });
 
-    // Non-login accounts get a fresh random secret on every seed. Nobody knows
-    // it, which is the point: the row exists so the employee has a role.
     const passwordHash = login
       ? knownHash
       : await bcrypt.hash(randomBytes(24).toString('base64url'), SALT_ROUNDS);

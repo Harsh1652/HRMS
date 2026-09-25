@@ -18,9 +18,6 @@ import {
 
 export const employeesRouter = Router();
 
-// Every employee route requires a session. What each role may then see or
-// change is decided in the service via policies/employeePolicy.ts — there is
-// deliberately no role check here, so the policy is the single place to read.
 employeesRouter.use(authenticate);
 
 employeesRouter.get('/', validate({ query: listQuerySchema }), asyncHandler(listHandler));

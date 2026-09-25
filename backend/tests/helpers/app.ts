@@ -5,7 +5,6 @@ import { SEED, SEED_PASSWORD, type SeedUserKey } from './seedUsers';
 
 let app: Express | undefined;
 
-/** One app instance per test file; creating it is cheap but not free. */
 export function getApp(): Express {
   app ??= createApp();
   return app;
@@ -13,11 +12,6 @@ export function getApp(): Express {
 
 const tokenCache = new Map<SeedUserKey, string>();
 
-/**
- * Logs in as a seed user and returns the bearer token. Cached per user per test
- * file so the authorization suite does not pay a bcrypt compare on every request.
- * Pass `fresh: true` after doing something that should invalidate the session.
- */
 export async function loginAs(who: SeedUserKey, options: { fresh?: boolean } = {}): Promise<string> {
   if (!options.fresh) {
     const cached = tokenCache.get(who);

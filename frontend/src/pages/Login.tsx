@@ -54,7 +54,6 @@ export function LoginPage() {
 
   return (
     <main className="min-h-screen lg:grid lg:grid-cols-[1.15fr_1fr]">
-      {/* Left: the register's statement of who sees what. */}
       <section className="border-b border-rule bg-surface-2 px-6 py-8 sm:px-10 lg:flex lg:flex-col lg:justify-between lg:border-b-0 lg:border-r lg:px-14 lg:py-12">
         <div>
           <p className="font-display text-[22px] font-semibold leading-none tracking-tight">HRMS</p>
@@ -97,7 +96,6 @@ export function LoginPage() {
         <p className="mt-10 hidden text-[12px] text-ink-faint lg:block">HR Management System · assessment build</p>
       </section>
 
-      {/* Right: the form on its own surface. */}
       <section className="flex items-center px-6 py-10 sm:px-10 lg:px-14">
         <div className="w-full max-w-md border border-rule bg-surface">
           <div className="border-b border-rule px-6 py-4">

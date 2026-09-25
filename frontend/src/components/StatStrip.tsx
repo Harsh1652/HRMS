@@ -6,10 +6,6 @@ export interface Stat {
   sub?: ReactNode;
 }
 
-/**
- * Headline figures as one ruled strip — divided by vertical rules, capped by a
- * heavy ink rule — the way a printed register's head is set.
- */
 export function StatStrip({ stats }: { stats: Stat[] }) {
   return (
     <div className="grid grid-cols-2 border border-rule border-t-2 border-t-ink bg-surface sm:grid-cols-4 sm:divide-x sm:divide-rule">

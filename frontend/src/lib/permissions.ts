@@ -1,11 +1,7 @@
 import type { AuthUser, Employee } from '../types/api';
 
-/**
- * Client-side mirror of backend/src/policies/employeePolicy.ts#updatableFields,
- * used only to decide which inputs to render. The API re-checks every request;
- * if this drifts, the user sees a 403 with the field named, never a silent
- * success.
- */
+// Mirrors updatableFields in backend/src/policies/employeePolicy.ts, for display only.
+// The API re-checks every request, so any drift shows up as a 403, not a silent success.
 export const ALL_FIELDS = ['firstName', 'lastName', 'email', 'phone', 'department', 'designation', 'joiningDate', 'managerId', 'role', 'status'] as const;
 export type EditableField = (typeof ALL_FIELDS)[number];
 

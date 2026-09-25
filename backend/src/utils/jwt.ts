@@ -2,13 +2,7 @@ import jwt from 'jsonwebtoken';
 import type { Role } from '@prisma/client';
 import { env } from '../config/env';
 
-/**
- * What a verified token proves about the caller. This is the ONLY source of
- * identity in the API. `authenticate` copies it onto
- * `req.user`; nothing downstream reads ids or roles from the request body.
- */
 export interface AccessTokenPayload {
-  /** User.id */
   sub: string;
   employeeId: string;
   role: Role;
@@ -20,10 +14,6 @@ export function signAccessToken(payload: AccessTokenPayload): string {
   });
 }
 
-/**
- * Seconds until the token expires, read from its own `exp`/`iat` claims so the
- * login response and the token can never disagree about the lifetime.
- */
 export function getTokenLifetimeSeconds(token: string): number {
   const decoded = jwt.decode(token);
   if (typeof decoded !== 'object' || decoded === null || !decoded.exp || !decoded.iat) {
@@ -32,7 +22,6 @@ export function getTokenLifetimeSeconds(token: string): number {
   return decoded.exp - decoded.iat;
 }
 
-/** Throws on a malformed, tampered, or expired token. Callers map that to 401. */
 export function verifyAccessToken(token: string): AccessTokenPayload {
   const decoded = jwt.verify(token, env.JWT_SECRET);
   if (typeof decoded !== 'object' || decoded === null) {

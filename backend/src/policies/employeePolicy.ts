@@ -1,14 +1,8 @@
 import { Role, type Prisma } from '@prisma/client';
 
 /**
- * Every authorization decision in the API is made here and only here.
- *
- * These are pure functions over two small shapes — the caller (from the verified
- * JWT) and the target row — so they can be unit-tested with no database, and so
- * a reviewer can read the whole access model in one file. Nothing else in
- * `src/` is allowed to branch on `role`.
- *
- * The rules, in prose (docs/AUTHORIZATION.md must match this file exactly):
+ * All authorization decisions live here, as pure functions that are easy to
+ * unit test. Nothing else should branch on `role`.
  *
  *   ADMIN     sees, creates, updates (any field) and soft-deletes anyone.
  *   MANAGER   sees self and direct reports; updates own phone; updates a direct
@@ -18,19 +12,16 @@ import { Role, type Prisma } from '@prisma/client';
  * "Direct report" is one level: target.managerId === actor.employeeId.
  */
 
-/** What the policy needs to know about the caller. Always sourced from the JWT. */
 export interface Actor {
   employeeId: string;
   role: Role;
 }
 
-/** What the policy needs to know about the employee being acted on. */
 export interface Target {
   id: string;
   managerId: string | null;
 }
 
-/** Every column a PUT may touch. `role` lives on User but is exposed on the Employee DTO. */
 export const UPDATABLE_FIELDS = [
   'firstName',
   'lastName',
@@ -59,7 +50,6 @@ function isDirectReport(actor: Actor, target: Target): boolean {
   return target.managerId !== null && target.managerId === actor.employeeId;
 }
 
-/** May the actor read this employee's record? */
 export function canView(actor: Actor, target: Target): boolean {
   switch (actor.role) {
     case Role.ADMIN:
@@ -71,35 +61,22 @@ export function canView(actor: Actor, target: Target): boolean {
   }
 }
 
-/** May the actor create employees (and their login)? */
 export function canCreate(actor: Actor): boolean {
   return actor.role === Role.ADMIN;
 }
 
-/** May the actor soft-delete employees? */
 export function canDelete(actor: Actor): boolean {
   return actor.role === Role.ADMIN;
 }
 
 /**
- * When a lookup finds nothing, may the actor be told the id does not exist?
- *
- * ADMIN can see every row, so an empty result genuinely means "missing" → 404.
- * Anyone else gets 403 whether the id is missing or merely outside their scope,
- * so probing 403-vs-404 cannot map which ids exist (D-005).
+ * Whether a miss may be reported as 404. Only ADMIN sees every row; everyone
+ * else gets 403 either way, so they can't probe which ids exist.
  */
 export function discloseMissing(actor: Actor): boolean {
   return actor.role === Role.ADMIN;
 }
 
-/**
- * Which fields may the actor change on this target? An empty set means the
- * update is forbidden outright. The service rejects the whole request if any
- * submitted key is outside this set — there is no partial application.
- *
- * Returns a fresh Set each call: a caller that mutates the result must not be
- * able to change the policy for every later request.
- */
 export function updatableFields(actor: Actor, target: Target): ReadonlySet<UpdatableField> {
   switch (actor.role) {
     case Role.ADMIN:
@@ -113,11 +90,7 @@ export function updatableFields(actor: Actor, target: Target): ReadonlySet<Updat
   }
 }
 
-/**
- * The Prisma `where` fragment that limits any list, count or lookup to what the
- * actor may see. Applied inside the database query — never
- * as a JavaScript filter over a broader result.
- */
+/** Limits any query to what the actor may see. Apply it in the query, not as a filter afterwards. */
 export function scopeWhere(actor: Actor): Prisma.EmployeeWhereInput {
   switch (actor.role) {
     case Role.ADMIN:

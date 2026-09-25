@@ -10,11 +10,6 @@ export interface DashboardStats {
   byDepartment: { department: string; count: number }[];
 }
 
-/**
- * Headline numbers for the dashboard, scoped to what the caller may see:
- * every count and the grouping carry `scopeWhere(actor)` inside the query. An EMPLOYEE therefore sees 1 / 1 / their own department;
- * a MANAGER sees their team; ADMIN sees the company.
- */
 export async function stats(actor: AuthenticatedUser): Promise<DashboardStats> {
   const scope = scopeWhere(actor);
 

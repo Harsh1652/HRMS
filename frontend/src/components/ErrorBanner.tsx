@@ -1,6 +1,5 @@
 import type { ApiError } from '../types/api';
 
-/** Shows the API's own message, plus field details when it sent any. */
 export function ErrorBanner({ error, title }: { error: ApiError | string | null | undefined; title?: string }) {
   if (!error) return null;
   const apiError = typeof error === 'string' ? { code: 'ERROR', message: error } : error;

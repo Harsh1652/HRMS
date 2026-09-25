@@ -1,9 +1,6 @@
 import type { EmploymentStatus, Prisma, Role } from '@prisma/client';
 
-/**
- * The one Prisma `select` used for every employee read. Explicit so that a new
- * column (or `passwordHash`, ever) cannot leak by default.
- */
+/** Used for every employee read. Explicit so new columns never leak by default. */
 export const employeeSelect = {
   id: true,
   firstName: true,
@@ -31,10 +28,8 @@ export interface EmployeeDto {
   phone: string | null;
   department: string;
   designation: string;
-  /** Calendar date, `YYYY-MM-DD`. */
   joiningDate: string;
   status: EmploymentStatus;
-  /** From the linked User (D-003). Null only for a row with no login, which the seed never creates. */
   role: Role | null;
   managerId: string | null;
   manager: { id: string; name: string } | null;

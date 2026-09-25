@@ -1,11 +1,3 @@
-/**
- * The mandatory authorization scenarios from docs/spec.md §9, plus the extra
- * cases the access model requires. Each block names the spec test it covers.
- *
- * Status-code rule under test (D-005): object-level denial is 403. ADMIN gets
- * 404 for an id that does not exist; every other role gets 403 for any id
- * outside their scope, existing or not.
- */
 import request from 'supertest';
 import { prisma } from '../../src/utils/prisma';
 import { bearer, getApp, loginAs } from '../helpers/app';
@@ -30,10 +22,6 @@ afterAll(async () => {
 });
 
 const get = (path: string, token: string) => request(app).get(path).set(bearer(token));
-
-// ---------------------------------------------------------------------------
-// Reads: GET /api/employees/:id
-// ---------------------------------------------------------------------------
 
 describe('GET /api/employees/:id', () => {
   it('[Spec Test 1] employee1 reads own profile → 200', async () => {
@@ -87,7 +75,7 @@ describe('GET /api/employees/:id', () => {
     expect(res.status).toBe(403);
   });
 
-  describe('missing vs forbidden (D-005)', () => {
+  describe('missing vs forbidden', () => {
     it('admin reads a nonexistent id → 404', async () => {
       const res = await get(`/api/employees/${NONEXISTENT_EMPLOYEE_ID}`, adminToken);
       expect(res.status).toBe(404);
@@ -105,6 +93,7 @@ describe('GET /api/employees/:id', () => {
     });
 
     it('employee1 gets the same body for a real-but-forbidden id and a fake id', async () => {
+    // Any difference in the body would leak whether the id exists.
       const [real, fake] = await Promise.all([
         get(`/api/employees/${SEED.employee2.employeeId}`, employee1Token),
         get(`/api/employees/${NONEXISTENT_EMPLOYEE_ID}`, employee1Token),
@@ -133,10 +122,6 @@ describe('GET /api/employees/:id', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Reads: GET /api/employees (list scoping)
-// ---------------------------------------------------------------------------
-
 describe('GET /api/employees', () => {
   it('employee sees exactly one record: their own', async () => {
     const res = await get('/api/employees', employee1Token);
@@ -154,8 +139,6 @@ describe('GET /api/employees', () => {
   });
 
   it('admin sees everyone in the seed', async () => {
-    // Other test files may have created employees before this one runs (D-009),
-    // so assert on the seeded ids rather than an exact total.
     const res = await get('/api/employees?limit=100', adminToken);
     expect(res.status).toBe(200);
     const ids: string[] = res.body.items.map((e: { id: string }) => e.id);
@@ -166,7 +149,6 @@ describe('GET /api/employees', () => {
   });
 
   it('a filter can narrow but never widen an employee’s scope', async () => {
-    // Sales has employees in the seed; employee1 is in Engineering.
     const res = await get('/api/employees?department=Sales', employee1Token);
     expect(res.status).toBe(200);
     expect(res.body.items).toEqual([]);
@@ -174,7 +156,7 @@ describe('GET /api/employees', () => {
   });
 
   it('a search cannot pull another employee into a manager’s scope', async () => {
-    const res = await get('/api/employees?search=Priya', managerToken); // employee3
+    const res = await get('/api/employees?search=Priya', managerToken);
     expect(res.status).toBe(200);
     expect(res.body.items).toEqual([]);
   });
@@ -190,13 +172,12 @@ describe('GET /api/employees', () => {
     const res = await get('/api/employees?status=INACTIVE&limit=100', adminToken);
     expect(res.status).toBe(200);
     const ids: string[] = res.body.items.map((e: { id: string }) => e.id);
-    expect(ids).toEqual(expect.arrayContaining(['EMP012', 'EMP013'])); // the two seeded INACTIVE rows
+    expect(ids).toEqual(expect.arrayContaining(['EMP012', 'EMP013']));
     for (const item of res.body.items) expect(item.status).toBe('INACTIVE');
   });
 
   it('admin: search matches id, name and email case-insensitively', async () => {
     const byId = await get('/api/employees?search=emp00', adminToken);
-    // 'neha' would also match S-neha Patel (EMP005); the surname is unique.
     const byName = await get('/api/employees?search=kulkarni', adminToken);
     const byEmail = await get('/api/employees?search=EMPLOYEE2@', adminToken);
     expect(byId.body.pagination.total).toBeGreaterThanOrEqual(10);
@@ -234,10 +215,6 @@ describe('GET /api/employees', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// GET /api/me
-// ---------------------------------------------------------------------------
-
 describe('GET /api/me', () => {
   it.each([
     ['admin', 'EMP000', 'ADMIN'],
@@ -256,10 +233,6 @@ describe('GET /api/me', () => {
     expect(res.status).toBe(401);
   });
 });
-
-// ---------------------------------------------------------------------------
-// Writes: POST / PUT / DELETE
-// ---------------------------------------------------------------------------
 
 const validCreateBody = (suffix: string) => ({
   firstName: 'Test',
@@ -309,7 +282,6 @@ describe('POST /api/employees', () => {
     expect(Number(res.body.employee.id.slice(3))).toBeGreaterThanOrEqual(100);
     expect(JSON.stringify(res.body)).not.toMatch(/password/i);
 
-    // The new login works, and it is scoped like any employee.
     const login = await request(app)
       .post('/api/auth/login')
       .send({ email: body.email, password: body.password });
@@ -319,7 +291,6 @@ describe('POST /api/employees', () => {
     const other = await get(`/api/employees/${SEED.employee1.employeeId}`, login.body.token);
     expect(other.status).toBe(403);
 
-    // The manager now sees the new report in their team.
     const asManager = await get(`/api/employees/${res.body.employee.id}`, managerToken);
     expect(asManager.status).toBe(200);
   });
@@ -547,7 +518,6 @@ describe('DELETE /api/employees/:id', () => {
       .send({ email: body.email, password: body.password });
     expect(relogin.status).toBe(401);
 
-    // Idempotent.
     const again = await del(`/api/employees/${id}`, adminToken);
     expect(again.status).toBe(204);
   });

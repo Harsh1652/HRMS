@@ -11,22 +11,14 @@ import {
   ServiceUnavailableError,
 } from '../utils/AppError';
 
-/** 404 for unmatched routes. Mounted after every real route. */
 export function notFoundHandler(req: Request, res: Response): void {
   res.status(404).json({
     error: { code: 'NOT_FOUND', message: `No route for ${req.method} ${req.originalUrl}` },
   });
 }
 
-/**
- * Prisma codes that mean "the database is busy or unreachable right now":
- *   P1001 can't reach · P1002 timed out · P1008 operation timeout ·
- *   P1017 server closed the connection · P2024 pool exhausted.
- * These are 503s the client may retry, not 500s to be debugged.
- */
 const TRANSIENT_DB_CODES = new Set(['P1001', 'P1002', 'P1008', 'P1017', 'P2024']);
 
-/** Maps Prisma's error codes onto the API's own error types. */
 function translatePrismaError(error: unknown): AppError | null {
   if (error instanceof Prisma.PrismaClientInitializationError) {
     return new ServiceUnavailableError('The database is not reachable right now. Please try again.');
@@ -56,7 +48,6 @@ function translatePrismaError(error: unknown): AppError | null {
   }
 }
 
-/** A Zod error that escaped `validate` (e.g. thrown inside a service). */
 function translateZodError(error: unknown): AppError | null {
   if (!(error instanceof ZodError)) return null;
   return new BadRequestError(
@@ -65,16 +56,10 @@ function translateZodError(error: unknown): AppError | null {
   );
 }
 
-/**
- * Central error translator. Every response body has the same shape:
- *   { error: { code, message, details? } }
- * Unknown errors are logged with their stack and returned as an opaque 500.
- */
 export function errorHandler(
   error: unknown,
   req: Request,
   res: Response,
-  // Express identifies error middleware by arity, so the 4th argument must exist.
   _next: NextFunction,
 ): void {
   const appError =
@@ -84,7 +69,6 @@ export function errorHandler(
 
   if (appError) {
     if (appError.status >= 500) {
-      // Keep the original error for the log: the translated one loses the Prisma code.
       logger.error({ err: error, path: req.originalUrl }, appError.message);
     }
     if (appError.status === 503) res.setHeader('Retry-After', '5');

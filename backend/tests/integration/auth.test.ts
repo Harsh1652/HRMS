@@ -32,7 +32,6 @@ describe('POST /api/auth/login', () => {
     expect(response.body.expiresIn).toBeGreaterThan(0);
     expect(response.body.expiresIn).toBeLessThanOrEqual(30 * 60);
 
-    // The token carries the identity the API will trust.
     const decoded = jwt.verify(response.body.token, env.JWT_SECRET) as jwt.JwtPayload;
     expect(decoded.employeeId).toBe('EMP001');
     expect(decoded.role).toBe('EMPLOYEE');
@@ -135,7 +134,6 @@ describe('authenticate middleware (via POST /api/auth/logout)', () => {
 
   it('returns 401 for a tampered token', async () => {
     const token = await loginAs('employee1');
-    // Flip the last character of the signature.
     const last = token.at(-1) === 'a' ? 'b' : 'a';
     const tampered = token.slice(0, -1) + last;
 

@@ -78,7 +78,6 @@ export function EmployeeListPage() {
         }
       />
 
-      {/* Summary strip: the scope in numbers, before any filtering. */}
       {stats.data && (
         <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-1 text-[13px] text-ink-muted">
           <span><span className="num font-semibold text-ink">{stats.data.total}</span> people</span>

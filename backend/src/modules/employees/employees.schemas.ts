@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { EmploymentStatus, Role } from '@prisma/client';
 
-/** Public employee id, e.g. EMP001. Anything else is a 400 before any lookup. */
 export const employeeIdSchema = z.string().regex(/^EMP\d{3,}$/, 'Employee id must look like EMP001');
 
 export const idParamSchema = z.object({ id: employeeIdSchema }).strict();
@@ -21,8 +20,6 @@ export type ListQuery = z.infer<typeof listQuerySchema>;
 const dateOnly = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected a YYYY-MM-DD date')
-  // JS silently rolls 2026-02-30 over to March 2; only a round-trip proves the
-  // calendar date is real.
   .refine((value) => {
     const parsed = new Date(`${value}T00:00:00Z`);
     return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
@@ -32,11 +29,6 @@ const name = z.string().trim().min(1).max(80);
 const label = z.string().trim().min(1).max(100);
 const phone = z.string().trim().min(6).max(20);
 
-/**
- * ADMIN creates the employee and their login together. The id is never accepted
- * from the client (D-004). `password` is the initial login secret; the new user
- * is expected to change it, but that flow is outside this MVP.
- */
 export const createEmployeeSchema = z
   .object({
     firstName: name,
@@ -53,11 +45,6 @@ export const createEmployeeSchema = z
   })
   .strict();
 
-/**
- * Partial by design (D-007): the caller sends only what changes. `.strict()`
- * turns an unknown key into a 400; *which* of the known keys the caller may
- * touch is decided afterwards by the policy, not here.
- */
 export const updateEmployeeSchema = z
   .object({
     firstName: name.optional(),

@@ -1,4 +1,3 @@
-/** Errors the API raises deliberately, carrying the status the client should see. */
 export class AppError extends Error {
   readonly status: number;
   readonly code: string;
@@ -44,7 +43,6 @@ export class ConflictError extends AppError {
   }
 }
 
-/** The database could not be reached or its pool is exhausted — retryable, not a bug. */
 export class ServiceUnavailableError extends AppError {
   constructor(message = 'The service is temporarily unavailable. Please try again.') {
     super(503, 'SERVICE_UNAVAILABLE', message);

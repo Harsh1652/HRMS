@@ -6,17 +6,11 @@ import { fetchDashboardStats } from './api/dashboard';
 import { RoleBadge } from './components/Badge';
 import { Monogram } from './components/Monogram';
 
-/**
- * Application shell: a rail on wide screens, a top bar with a Menu on phones.
- * Navigation is role-aware — an EMPLOYEE never sees the register — but the API
- * enforces the same rules regardless of what is rendered here.
- */
 export function AppShell() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [signingOut, setSigningOut] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  // Same query key as the dashboard, so this costs nothing extra once that page has loaded.
   const stats = useQuery({ queryKey: ['dashboard'], queryFn: fetchDashboardStats, enabled: !!user });
 
   if (!user) return null;

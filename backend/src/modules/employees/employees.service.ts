@@ -20,15 +20,7 @@ export interface EmployeeListResult {
   pagination: { page: number; limit: number; total: number; totalPages: number };
 }
 
-// ---------------------------------------------------------------------------
-// Reads
-// ---------------------------------------------------------------------------
-
-/**
- * Scoped list. The policy's `scopeWhere` is AND-ed with the caller's filters
- * inside the query, so a filter can only narrow what the actor already sees —
- * never widen it.
- */
+/** Filters are AND-ed with `scopeWhere`, so they can narrow the caller's view but never widen it. */
 export async function list(actor: AuthenticatedUser, query: ListQuery): Promise<EmployeeListResult> {
   const filters: Prisma.EmployeeWhereInput[] = [];
 
@@ -70,13 +62,9 @@ export async function list(actor: AuthenticatedUser, query: ListQuery): Promise<
 }
 
 /**
- * The one way any read/update/delete path loads a target row. Scoped in the
- * query; when nothing comes back the policy decides whether the actor may learn
- * that (404) or not (403) — see `discloseMissing` and D-005.
- *
- * Found rows are re-checked with `canView` — redundant with the scoped query by
- * construction, and kept because it makes the object-level rule visible at the
- * call site instead of implied by a where clause.
+ * Loads a target row for any read, update or delete. On a miss, `discloseMissing`
+ * picks 404 or 403. The `canView` check is redundant with the scoped query but
+ * keeps the rule visible here.
  */
 async function findScoped(actor: AuthenticatedUser, id: string): Promise<EmployeeRow> {
   const row = await prisma.employee.findFirst({
@@ -98,20 +86,10 @@ export async function getById(actor: AuthenticatedUser, id: string): Promise<Emp
   return toEmployeeDto(await findScoped(actor, id));
 }
 
-/** The caller's own record. The id comes from the token, never the request. */
 export function me(actor: AuthenticatedUser): Promise<EmployeeDto> {
   return getById(actor, actor.employeeId);
 }
 
-// ---------------------------------------------------------------------------
-// Shared validation for writes (business rules, not authorization)
-// ---------------------------------------------------------------------------
-
-/**
- * A manager must exist, must not be the employee themself, and must not sit
- * anywhere below the employee in the reporting line — otherwise the org chart
- * loops. The walk is bounded so pre-existing bad data cannot hang the request.
- */
 async function assertValidManager(employeeId: string | null, managerId: string): Promise<void> {
   if (employeeId !== null && managerId === employeeId) {
     throw new BadRequestError('An employee cannot be their own manager', [
@@ -147,14 +125,6 @@ async function assertValidManager(employeeId: string | null, managerId: string):
   }
 }
 
-// ---------------------------------------------------------------------------
-// Writes
-// ---------------------------------------------------------------------------
-
-/**
- * Creates the employee and their login in one transaction (D-003). The public id
- * comes from `employee_id_seq` (D-004); the client never supplies one.
- */
 export async function create(actor: AuthenticatedUser, input: CreateEmployeeInput): Promise<EmployeeDto> {
   if (!canCreate(actor)) throw new ForbiddenError('Only an administrator can create employees');
 
@@ -166,7 +136,6 @@ export async function create(actor: AuthenticatedUser, input: CreateEmployeeInpu
     const seq = await tx.$queryRaw<{ nextval: bigint }[]>`SELECT nextval('employee_id_seq')`;
     const nextval = seq[0]?.nextval;
     if (nextval === undefined) {
-      // Only reachable if the sequence from the initial migration is missing.
       throw new Error('employee_id_seq returned no value');
     }
     const id = `EMP${String(nextval).padStart(3, '0')}`;
@@ -203,16 +172,10 @@ export async function create(actor: AuthenticatedUser, input: CreateEmployeeInpu
 }
 
 /**
- * Partial update with the mass-assignment guard (D-007):
- *   1. the target is loaded through the same scoped path as a read (403/404),
- *   2. every submitted key is checked against `updatableFields(actor, target)`,
- *   3. any key outside that set fails the whole request with 403 and names the
- *      offending fields — nothing is applied,
- *   4. an explicit `data` object is built from the allowed keys; `req.body` is
- *      never handed to Prisma.
- *
- * `email` and `status` are mirrored onto the User row in the same transaction
- * so the login stays consistent with the employee record (D-015).
+ * Mass-assignment guard: load the target through the scoped path, reject the
+ * whole request with 403 if any key is outside `updatableFields`, then build
+ * `data` field by field so the request body never reaches Prisma. Login fields
+ * (`email`, `role`, `status`) are updated on the User row in the same transaction.
  */
 export async function update(
   actor: AuthenticatedUser,
@@ -234,7 +197,6 @@ export async function update(
 
   if (input.managerId) await assertValidManager(id, input.managerId);
 
-  // Build the write explicitly, field by field, from what the policy allowed.
   const employeeData: Prisma.EmployeeUpdateInput = {};
   if (input.firstName !== undefined) employeeData.firstName = input.firstName;
   if (input.lastName !== undefined) employeeData.lastName = input.lastName;
@@ -266,19 +228,13 @@ export async function update(
   return toEmployeeDto(row);
 }
 
-/**
- * Soft delete: `Employee.status = INACTIVE` and
- * `User.isActive = false` in one transaction. `authenticate` re-reads
- * `isActive` on every request, so the user's current token stops working on
- * their next call. Idempotent — deactivating an inactive employee is a no-op 204.
- */
+/** Soft delete. `authenticate` re-reads `isActive`, so the user's token stops working immediately. */
 export async function softDelete(actor: AuthenticatedUser, id: string): Promise<void> {
   if (!canDelete(actor)) throw new ForbiddenError('Only an administrator can deactivate employees');
 
   await findScoped(actor, id);
 
-  // A business rule, not an authorization rule: the last admin must not be able
-  // to lock everyone out by deactivating themself.
+  // Business rule: stops the last admin from locking everyone out.
   if (id === actor.employeeId) {
     throw new BadRequestError('You cannot deactivate your own account');
   }

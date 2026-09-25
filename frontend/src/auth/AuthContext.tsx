@@ -5,11 +5,9 @@ import { clearToken, getToken, SESSION_EXPIRED_EVENT, setToken } from './token';
 import type { AuthUser, Role } from '../types/api';
 
 export interface AuthState {
-  /** `undefined` while the stored session is being validated on first load. */
   user: AuthUser | null | undefined;
   login: (email: string, password: string) => Promise<AuthUser>;
   logout: () => Promise<void>;
-  /** Set when the session ended without the user choosing to log out. */
   expiredNotice: string | null;
   clearExpiredNotice: () => void;
   hasRole: (...roles: Role[]) => boolean;
@@ -23,8 +21,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null | undefined>(undefined);
   const [expiredNotice, setExpiredNotice] = useState<string | null>(null);
 
-  // On first load, a live token in sessionStorage is re-validated against /me.
-  // The server, not the client, decides whether the session still stands.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -53,7 +49,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Token expiry timer or a 401 from any request ends the session.
   useEffect(() => {
     const onExpired = () => {
       setUser((current) => {
@@ -78,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await authApi.logout();
     } catch {
-      // The token may already be dead; local logout proceeds regardless.
+      // The token may already be invalid; log out locally anyway.
     }
     clearToken();
     setUser(null);

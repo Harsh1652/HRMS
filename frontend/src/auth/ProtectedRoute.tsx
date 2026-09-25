@@ -3,11 +3,6 @@ import { useAuth } from './useAuth';
 import { Spinner } from '../components/Spinner';
 import type { Role } from '../types/api';
 
-/**
- * Gate for a route subtree. With `roles`, users outside the list are sent to
- * the dashboard rather than shown a page they cannot use. The API enforces
- * the same rule independently; this only keeps the UI honest.
- */
 export function ProtectedRoute({ roles }: { roles?: Role[] }) {
   const { user } = useAuth();
   const location = useLocation();

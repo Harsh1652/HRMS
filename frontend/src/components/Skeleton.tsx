@@ -1,4 +1,3 @@
-/** Placeholder blocks in the surface tint; a page keeps its shape while data loads. */
 export function Skeleton({ className = '' }: { className?: string }) {
   return <span className={`block animate-pulse rounded-sm bg-surface-2 ${className}`} aria-hidden />;
 }

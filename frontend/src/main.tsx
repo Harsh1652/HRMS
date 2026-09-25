@@ -10,11 +10,9 @@ import './index.css';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // The API is the source of truth and requests are not cheap; avoid refetch storms.
       staleTime: 30_000,
       retry: (failureCount, error) => {
         const status = (error as { response?: { status?: number } })?.response?.status;
-        // Never retry an authorization or validation answer; retry network blips once.
         if (status && status >= 400 && status < 500) return false;
         return failureCount < 1;
       },

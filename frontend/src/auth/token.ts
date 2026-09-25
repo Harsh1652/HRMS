@@ -1,17 +1,11 @@
-/**
- * Access-token store: memory first, mirrored to sessionStorage so a page refresh
- * keeps the session but closing the tab ends it.
- *
- * The JWT's `exp` is decoded client-side so the app can log out on its own
- * clock instead of waiting for the next 401. The server remains the real guard.
- */
+// Token lives in memory, mirrored to sessionStorage so a refresh keeps the session
+// but closing the tab ends it. `exp` is read here only to log out on time; the server still decides.
 
 const STORAGE_KEY = 'hrms.token';
 
 let token: string | null = null;
 let expiryTimer: ReturnType<typeof setTimeout> | null = null;
 
-/** Fired on window when the session ends for any reason other than an explicit logout. */
 export const SESSION_EXPIRED_EVENT = 'hrms:session-expired';
 
 function readStorage(): string | null {
@@ -27,11 +21,10 @@ function writeStorage(value: string | null): void {
     if (value === null) sessionStorage.removeItem(STORAGE_KEY);
     else sessionStorage.setItem(STORAGE_KEY, value);
   } catch {
-    // Private mode or blocked storage: the in-memory copy still works for this tab.
+    // Storage can be blocked (e.g. private mode); the in-memory copy still works.
   }
 }
 
-/** Seconds since epoch at which the token expires, or null if unreadable. */
 export function getTokenExpiry(value: string): number | null {
   try {
     const payload = value.split('.')[1];

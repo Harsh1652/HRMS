@@ -1,7 +1,3 @@
-/**
- * Department → tint. Derived from the name so a person keeps the same colour
- * everywhere they appear and departments read as families without a legend.
- */
 const TINTS = [
   'bg-sage-tint text-sage',
   'bg-accent-tint text-accent-deep',

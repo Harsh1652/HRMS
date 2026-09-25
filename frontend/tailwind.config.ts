@@ -1,9 +1,5 @@
 import type { Config } from 'tailwindcss';
 
-/**
- * "Ledger" — a warm, paper-toned register. No black, no blue, no neon.
- * Hierarchy comes from type and 1px rules, not shadows. Corners stay near-square.
- */
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {

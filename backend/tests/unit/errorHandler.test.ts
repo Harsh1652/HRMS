@@ -1,7 +1,3 @@
-/**
- * The central error translator, exercised with hand-built errors. No database.
- * Every response must have the shape { error: { code, message, details? } }.
- */
 import { Prisma } from '@prisma/client';
 import { z, type ZodError } from 'zod';
 import type { NextFunction, Request, Response } from 'express';

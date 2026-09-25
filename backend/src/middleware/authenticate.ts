@@ -4,7 +4,6 @@ import { prisma } from '../utils/prisma';
 import { verifyAccessToken } from '../utils/jwt';
 import { UnauthorizedError } from '../utils/AppError';
 
-/** The authenticated caller. Populated only by this middleware, only from the JWT. */
 export interface AuthenticatedUser {
   userId: string;
   employeeId: string;
@@ -21,12 +20,9 @@ declare global {
 }
 
 /**
- * Rejects the request unless it carries a valid `Authorization: Bearer <token>`
- * for a user who is still active.
- *
- * The `isActive` re-check costs one indexed lookup per
- * request and is what makes soft-delete take effect immediately instead of
- * whenever the deactivated user's token happens to expire.
+ * Requires a valid bearer token for a user who is still active. Re-checking
+ * `isActive` costs one lookup per request but makes deactivation take effect
+ * immediately instead of when the token expires
  */
 export async function authenticate(
   req: Request,
@@ -45,7 +41,7 @@ export async function authenticate(
   try {
     payload = verifyAccessToken(token);
   } catch {
-    // Expired vs malformed is deliberately not distinguished to the client.
+    // Don't tell the client whether it was expired or malformed.
     next(new UnauthorizedError('Invalid or expired token'));
     return;
   }
@@ -61,8 +57,7 @@ export async function authenticate(
       return;
     }
 
-    // Role and employeeId are taken from the database row, not the token, so a
-    // role change or re-assignment takes effect on the very next request.
+    // Use the DB row, not the token, so role changes apply on the next request.
     req.user = { userId: user.id, employeeId: user.employeeId, role: user.role };
     next();
   } catch (error) {
@@ -70,7 +65,6 @@ export async function authenticate(
   }
 }
 
-/** For handlers that run after `authenticate` and need a non-optional user. */
 export function requireUser(req: Request): AuthenticatedUser {
   if (!req.user) throw new UnauthorizedError();
   return req.user;

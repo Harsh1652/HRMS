@@ -4,7 +4,6 @@ import * as employeesService from './employees.service';
 import type { ListQuery } from './employees.schemas';
 
 export async function listHandler(req: Request, res: Response): Promise<void> {
-  // `validate` has already parsed and coerced the query; the cast records that.
   const result = await employeesService.list(requireUser(req), req.query as unknown as ListQuery);
   res.status(200).json(result);
 }

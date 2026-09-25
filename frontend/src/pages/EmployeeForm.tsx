@@ -90,8 +90,6 @@ function EmployeeFormInner({ employee }: { employee?: Employee }) {
   );
   const can = (f: EditableField) => editable.has(f);
 
-  // Manager options: whatever the caller may see. ADMIN → everyone; a MANAGER
-  // editing a report gets their own team, which is all they could assign anyway.
   const managers = useQuery({
     queryKey: ['employees', { limit: 100, forManagerPicker: true }],
     queryFn: () => listEmployees({ limit: 100, status: 'ACTIVE' }),
@@ -121,8 +119,6 @@ function EmployeeFormInner({ employee }: { employee?: Employee }) {
         };
         return createEmployee(payload);
       }
-      // Send only fields the policy allows AND that actually changed, so an
-      // unchanged disallowed field never triggers a needless 403.
       const dirty = form.formState.dirtyFields;
       const payload: UpdateEmployeeInput = {};
       if (can('firstName') && dirty.firstName) payload.firstName = values.firstName;

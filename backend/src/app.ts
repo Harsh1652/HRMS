@@ -10,24 +10,15 @@ import { requestLogger } from './middleware/requestLogger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { apiRouter } from './routes';
 
-/**
- * The OpenAPI document is hand-written and is the API contract.
- * Resolved relative to this file so it works from both src/ (tsx) and dist/.
- */
 function loadOpenApiSpec(): Record<string, unknown> {
   const specPath = path.resolve(__dirname, '..', 'openapi.yaml');
   return YAML.parse(fs.readFileSync(specPath, 'utf8')) as Record<string, unknown>;
 }
 
-/**
- * Builds the Express app without starting a listener, so tests drive it through
- * supertest directly.
- */
 export function createApp(): Express {
   const app = express();
   const openApiSpec = loadOpenApiSpec();
 
-  // Security headers first so they apply to every response, including errors.
   app.use(helmet());
   app.use(requestLogger);
   app.use(
@@ -38,13 +29,11 @@ export function createApp(): Express {
   );
   app.use(express.json({ limit: '100kb' }));
 
-  // Unauthenticated, for uptime checks.
   app.get('/health', (_req, res) => {
     res.status(200).json({ status: 'ok', uptime: process.uptime() });
   });
 
-  // API docs are deliberately public. Helmet's default CSP
-  // blocks Swagger UI's inline scripts, so it is relaxed for this path only.
+  // Docs are public. Helmet's CSP blocks Swagger UI's inline scripts, so it's off for this path only.
   app.get('/api/docs.json', (_req, res) => {
     res.status(200).json(openApiSpec);
   });
@@ -60,7 +49,6 @@ export function createApp(): Express {
 
   app.use('/api', apiRouter);
 
-  // Order matters: unmatched routes first, then the error translator last.
   app.use(notFoundHandler);
   app.use(errorHandler);
 

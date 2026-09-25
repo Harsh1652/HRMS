@@ -24,7 +24,6 @@ const TONE_RULE: Record<ToastTone, string> = {
 
 let nextId = 1;
 
-/** Quiet confirmations, bottom-right, auto-dismissing. No icons, no colour fills. */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
 

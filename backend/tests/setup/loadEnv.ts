@@ -1,8 +1,3 @@
-/**
- * Jest `setupFiles` entry: runs before every test file's imports, so
- * `src/config/env.ts` sees the test values. `.env.test` points every URL at the
- * `test` schema (D-006, D-009); the real `.env` is never read during tests.
- */
 import path from 'node:path';
 import fs from 'node:fs';
 import dotenv from 'dotenv';
@@ -15,8 +10,6 @@ if (!fs.existsSync(envFile)) {
   );
 }
 
-// `override: true` so a stray DATABASE_URL in the shell cannot point tests at
-// the real schema.
 dotenv.config({ path: envFile, override: true });
 
 if (!/schema=test/.test(process.env.DATABASE_URL ?? '')) {

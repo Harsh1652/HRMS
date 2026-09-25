@@ -1,14 +1,11 @@
-// HRMS data model. See docs/DECISIONS.md D-003 (role on User), D-004 (ID sequence),
-// D-006 (Supabase two-URL setup), D-008 (department as string).
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL")   // pooled (pgbouncer) — used by the app
-  directUrl = env("DIRECT_URL")     // direct — used by `prisma migrate`
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum Role {
@@ -22,8 +19,7 @@ enum EmploymentStatus {
   INACTIVE
 }
 
-/// Login identity. `role` lives here and only here; the JWT and the policy
-/// both read it from this row. Every Employee has exactly one User.
+/// Login identity. The single source of `role`; every Employee has one User.
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -39,9 +35,7 @@ model User {
   @@index([role])
 }
 
-/// `id` is the public identifier used in URLs, e.g. "EMP001". Seed rows use
-/// EMP000–EMP015; the API generates new ids from `employee_id_seq` (starts at
-/// 100), which is created by hand in the first migration.
+/// `id` is the public id (EMP001). New ids come from `employee_id_seq`, created in the first migration.
 model Employee {
   id          String           @id
   firstName   String
@@ -56,8 +50,6 @@ model Employee {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
-  // Self-relation: one manager, many direct reports. The policy treats
-  // `managerId === actor.employeeId` as "in my team" — one level only.
   manager Employee?  @relation("Reports", fields: [managerId], references: [id], onDelete: SetNull)
   reports Employee[] @relation("Reports")
 

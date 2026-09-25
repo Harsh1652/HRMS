@@ -1,6 +1,5 @@
 import type { EmploymentStatus, Role } from '../types/api';
 
-/** Status as a small dot + word. No pills, no saturated colour. */
 export function StatusBadge({ status }: { status: EmploymentStatus }) {
   const active = status === 'ACTIVE';
   return (

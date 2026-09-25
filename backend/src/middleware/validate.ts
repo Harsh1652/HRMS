@@ -15,13 +15,6 @@ function formatZodError(error: ZodError): { path: string; message: string }[] {
   }));
 }
 
-/**
- * Validates and replaces `body`, `query` and `params` with their parsed results,
- * so handlers receive coerced, typed values rather than raw strings.
- *
- * Validation is about shape. Which fields the caller is *allowed* to send is a
- * separate question answered by `policies/employeePolicy.ts` in the service.
- */
 export function validate(schemas: ValidationSchemas) {
   return (req: Request, _res: Response, next: NextFunction): void => {
     try {

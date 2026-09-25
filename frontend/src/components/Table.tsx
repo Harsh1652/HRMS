@@ -1,9 +1,5 @@
 import type { ReactNode } from 'react';
 
-/**
- * A register-style table: hairline rules, eyebrow headers, no zebra stripes.
- * Rows may be clickable; the whole row is the target, with a visible hover.
- */
 export function Table({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
     <div className={`overflow-x-auto border-y border-rule ${className}`}>

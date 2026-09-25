@@ -1,7 +1,3 @@
-/**
- * Exhaustive branch coverage of the authorization policy. No database, no env:
- * this file must run anywhere `npm run test:unit` is typed.
- */
 import { Role } from '@prisma/client';
 import {
   UPDATABLE_FIELDS,
@@ -23,7 +19,6 @@ const self = (actor: Actor): Target => ({ id: actor.employeeId, managerId: 'EMP0
 const reportOf = (actor: Actor): Target => ({ id: 'EMP555', managerId: actor.employeeId });
 const stranger: Target = { id: 'EMP003', managerId: 'EMP000' };
 const orphan: Target = { id: 'EMP777', managerId: null };
-/** Two levels down: reports to someone who reports to the manager. */
 const skipLevelReport: Target = { id: 'EMP888', managerId: 'EMP555' };
 
 const fields = (set: ReadonlySet<string>) => [...set].sort();
@@ -69,7 +64,7 @@ describe('canCreate / canDelete', () => {
   });
 });
 
-describe('discloseMissing (D-005: 404 vs 403 on an empty lookup)', () => {
+describe('discloseMissing (404 vs 403 on an empty lookup)', () => {
   it('ADMIN may learn an id does not exist (404)', () => expect(discloseMissing(admin)).toBe(true));
   it('MANAGER may not (403, existence undisclosed)', () => expect(discloseMissing(manager)).toBe(false));
   it('EMPLOYEE may not (403, existence undisclosed)', () => expect(discloseMissing(employee)).toBe(false));
@@ -136,8 +131,6 @@ describe('scopeWhere', () => {
   it('EMPLOYEE is scoped to self only', () => expect(scopeWhere(employee)).toEqual({ id: 'EMP001' }));
 
   it('uses the actor id from the token, never a caller-supplied one', () => {
-    // The function signature makes this structural: there is no parameter for a
-    // requested id. This test exists so the property is stated, not assumed.
     expect(scopeWhere.length).toBe(1);
   });
 });

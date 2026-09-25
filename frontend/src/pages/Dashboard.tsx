@@ -41,7 +41,6 @@ export function DashboardPage() {
   const canOpenRegister = role !== 'EMPLOYEE';
 
   const stats = useQuery({ queryKey: ['dashboard'], queryFn: fetchDashboardStats });
-  // One scoped list feeds both the "recent joiners" and "reporting lines" panels.
   const people = useQuery({ queryKey: ['employees', { limit: 100, forDashboard: true }], queryFn: () => listEmployees({ limit: 100 }) });
 
   const recent = useMemo(

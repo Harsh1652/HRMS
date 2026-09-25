@@ -27,7 +27,6 @@ export function EmployeeDetailPage() {
   const [deactivateError, setDeactivateError] = useState<ApiError | null>(null);
 
   const employee = useQuery({ queryKey: ['employee', id], queryFn: () => getEmployee(id), enabled: !!id });
-  // Scoped list, reused across pages; direct reports are derived client-side.
   const people = useQuery({ queryKey: ['employees', { limit: 100, forDashboard: true }], queryFn: () => listEmployees({ limit: 100 }) });
   const reports = useMemo(() => (people.data?.items ?? []).filter((p) => p.managerId === id), [people.data, id]);
 

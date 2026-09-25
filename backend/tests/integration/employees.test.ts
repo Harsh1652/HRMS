@@ -1,9 +1,3 @@
-/**
- * Employee module behaviour that is not about *who* may do what (that is
- * authorization.test.ts) but about *what* the endpoints do: validation, the id
- * sequence, uniqueness, manager integrity, and User/Employee consistency.
- * Everything here runs as ADMIN and operates on rows it creates.
- */
 import request from 'supertest';
 import { prisma } from '../../src/utils/prisma';
 import { bearer, getApp, loginAs } from '../helpers/app';
@@ -122,8 +116,6 @@ describe('POST /api/employees — behaviour', () => {
   });
 
   it('returns the manager summary when managerId is given', async () => {
-    // EMP011 (Sales manager, non-login) rather than EMP010: authorization.test.ts
-    // asserts EMP010's team is exactly {EMP001, EMP002}, and file order is not fixed.
     const { employee } = await createOne({ managerId: 'EMP011' });
     expect(employee.manager).toEqual({ id: 'EMP011', name: expect.stringContaining('Kavya') });
   });
@@ -213,7 +205,7 @@ describe('PUT /api/employees/:id — behaviour', () => {
     expect(res.body.employee.phone).toBeNull();
   });
 
-  it('changing email also changes the login email (D-015)', async () => {
+  it('changing email also changes the login email', async () => {
     const { id, body: b } = await createOne();
     const newEmail = `renamed.${Date.now()}@company.com`;
     const res = await put(id, { email: newEmail });
@@ -225,23 +217,21 @@ describe('PUT /api/employees/:id — behaviour', () => {
     expect(newLogin.status).toBe(200);
   });
 
-  it('changing role changes the login role and takes effect on the next request (D-015)', async () => {
+  it('changing role changes the login role and takes effect on the next request', async () => {
     const { id, body: b } = await createOne();
     const login = await request(app).post('/api/auth/login').send({ email: b.email, password: b.password });
     const token: string = login.body.token;
 
-    // As EMPLOYEE, cannot see employee1.
     expect((await request(app).get(`/api/employees/${SEED.employee1.employeeId}`).set(bearer(token))).status).toBe(403);
 
     const res = await put(id, { role: 'ADMIN' });
     expect(res.status).toBe(200);
     expect(res.body.employee.role).toBe('ADMIN');
 
-    // Same token, next request: authenticate re-reads the role from the DB.
     expect((await request(app).get(`/api/employees/${SEED.employee1.employeeId}`).set(bearer(token))).status).toBe(200);
   });
 
-  it('setting status INACTIVE via PUT disables the login (D-015)', async () => {
+  it('setting status INACTIVE via PUT disables the login', async () => {
     const { id, body: b } = await createOne();
     const res = await put(id, { status: 'INACTIVE' });
     expect(res.status).toBe(200);

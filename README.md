@@ -320,8 +320,6 @@ npm test
 ```
 Runs the unit tests plus **116** integration tests that go through the real HTTP stack against the `test` schema: auth (17), authorization (57, including the six required scenarios), employee behaviour (30) and dashboard (6). Each run first rebuilds the `test` schema **from the migration files** and seeds it, so it also checks the migrations. A run takes 2–4 minutes against a remote database.
 
-> If you run `npm test` from an AI coding agent, Prisma's safety guard stops the schema reset and asks for explicit consent. This does not happen in a normal terminal.
-
 ## 14. Design Decisions / Trade-offs
 
 The main design decisions:

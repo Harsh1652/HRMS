@@ -1,9 +1,5 @@
 import type { ReactNode } from 'react';
 
-/**
- * A bordered surface with a titled header bar. Sections become objects on the
- * page instead of runs of text separated by whitespace.
- */
 export function Panel({
   title,
   eyebrow,

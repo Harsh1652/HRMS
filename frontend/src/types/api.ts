@@ -1,5 +1,3 @@
-/** Mirrors backend/openapi.yaml. Keep in sync when the contract changes. */
-
 export type Role = 'ADMIN' | 'MANAGER' | 'EMPLOYEE';
 export type EmploymentStatus = 'ACTIVE' | 'INACTIVE';
 
@@ -31,7 +29,6 @@ export interface Employee {
   phone: string | null;
   department: string;
   designation: string;
-  /** YYYY-MM-DD */
   joiningDate: string;
   status: EmploymentStatus;
   role: Role | null;

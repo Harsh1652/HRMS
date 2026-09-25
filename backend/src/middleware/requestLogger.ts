@@ -1,10 +1,7 @@
 import pinoHttp from 'pino-http';
 import { logger } from '../utils/logger';
 
-/**
- * One structured line per request. The bearer token is redacted so a leaked log
- * cannot be replayed as a session.
- */
+/** Auth headers are redacted so a leaked log can't be replayed as a session. */
 export const requestLogger = pinoHttp({
   logger,
   redact: {
@@ -17,7 +14,6 @@ export const requestLogger = pinoHttp({
     return 'info';
   },
   serializers: {
-    // Keep request logs to what is useful for tracing; drop headers and bodies.
     req(req) {
       return { id: req.id, method: req.method, url: req.url };
     },

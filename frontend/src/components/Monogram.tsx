@@ -1,9 +1,5 @@
 import { tintFor } from '../lib/tint';
 
-/**
- * Initials on a tinted square. The tint comes from the department (see
- * lib/tint.ts), so a person keeps the same colour everywhere they appear.
- */
 const SIZES = {
   sm: 'h-7 w-7 text-[12px]',
   md: 'h-9 w-9 text-[14px]',
