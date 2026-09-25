@@ -140,7 +140,7 @@ describe('PUT /api/employees/:id — validation', () => {
   });
 
   it('rejects a malformed id → 400', async () => {
-    const res = await put('EMP-1', { phone: '+91-98450-00000' });
+    const res = await put('EMP-1', { phone: '9845000000' });
     expect(res.status).toBe(400);
   });
 
@@ -199,7 +199,7 @@ describe('PUT /api/employees/:id — behaviour', () => {
   });
 
   it('clears the phone with phone: null', async () => {
-    const { id } = await createOne({ phone: '+91-98450-00000' });
+    const { id } = await createOne({ phone: '9845000000' });
     const res = await put(id, { phone: null });
     expect(res.status).toBe(200);
     expect(res.body.employee.phone).toBeNull();

@@ -27,7 +27,7 @@ const dateOnly = z
 
 const name = z.string().trim().min(1).max(80);
 const label = z.string().trim().min(1).max(100);
-const phone = z.string().trim().min(6).max(20);
+const phone = z.string().trim().regex(/^\d{10}$/, 'Phone must be exactly 10 digits');
 
 export const createEmployeeSchema = z
   .object({

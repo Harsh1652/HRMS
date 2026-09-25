@@ -16,9 +16,10 @@ import { Monogram } from '../components/Monogram';
 import { Skeleton } from '../components/Skeleton';
 import { useToast } from '../components/useToast';
 import type { ApiError, Employee } from '../types/api';
+import { keepDigits, PHONE_PATTERN } from '../lib/input';
 
 const phoneSchema = z.object({
-  phone: z.string().trim().min(6, 'At least 6 characters').max(20, 'At most 20 characters').or(z.literal('')),
+  phone: z.string().trim().regex(PHONE_PATTERN, 'Enter a 10-digit phone number').or(z.literal('')),
 });
 type PhoneForm = z.infer<typeof phoneSchema>;
 
@@ -98,7 +99,7 @@ function PhoneEditor({ employee, onSaved }: { employee: Employee; onSaved: (e: E
       <p className="text-[13px] text-ink-muted">The one field you can change yourself. Everything else is maintained by HR — and the server enforces that, not this page.</p>
       <form onSubmit={form.handleSubmit((v) => mutation.mutate(v))} noValidate className="mt-4 flex flex-col gap-4">
         <ErrorBanner error={apiError} />
-        <TextField label="Phone" mono placeholder="+91-98450-00000" error={form.formState.errors.phone?.message} {...form.register('phone')} />
+        <TextField label="Phone" mono inputMode="numeric" maxLength={10} placeholder="9845000000" onInput={keepDigits} hint="10 digits" error={form.formState.errors.phone?.message} {...form.register('phone')} />
         <div className="flex justify-end">
           <Button type="submit" variant="primary" loading={mutation.isPending} disabled={!form.formState.isDirty}>Save</Button>
         </div>

@@ -77,7 +77,7 @@ components:
         firstName: { type: string, example: Neha }
         lastName: { type: string, example: Kulkarni }
         email: { type: string, format: email, example: employee1@company.com }
-        phone: { type: string, nullable: true, example: '+91-98450-00001' }
+        phone: { type: string, nullable: true, pattern: '^\d{10}$', example: '9845000001' }
         department: { type: string, example: Engineering }
         designation: { type: string, example: Software Engineer }
         joiningDate: { type: string, format: date, example: '2022-01-10' }
@@ -127,7 +127,7 @@ components:
         firstName: { type: string, maxLength: 80, example: Tara }
         lastName: { type: string, maxLength: 80, example: Bhat }
         email: { type: string, format: email, example: tara.bhat@company.com }
-        phone: { type: string, nullable: true, example: '+91-98450-00100' }
+        phone: { type: string, nullable: true, pattern: '^\d{10}$', example: '9845000100' }
         department: { type: string, maxLength: 100, example: Engineering }
         designation: { type: string, maxLength: 100, example: QA Engineer }
         joiningDate: { type: string, format: date, example: '2026-10-01' }
@@ -154,7 +154,7 @@ components:
         firstName: { type: string, maxLength: 80 }
         lastName: { type: string, maxLength: 80 }
         email: { type: string, format: email }
-        phone: { type: string, nullable: true, example: '+91-98450-00001' }
+        phone: { type: string, nullable: true, pattern: '^\d{10}$', example: '9845000001' }
         department: { type: string, maxLength: 100 }
         designation: { type: string, maxLength: 100, example: Senior Software Engineer }
         joiningDate: { type: string, format: date }
@@ -450,7 +450,7 @@ paths:
             examples:
               employeePhone:
                 summary: employee1 updates own phone
-                value: { phone: '+91-98450-11111' }
+                value: { phone: '9845011111' }
               managerDesignation:
                 summary: manager promotes a direct report
                 value: { designation: Senior Software Engineer }

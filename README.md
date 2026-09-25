@@ -6,6 +6,8 @@ A full-stack HR register (MVP): a React frontend and an Express + TypeScript API
 
 Three roles use it: **HR / Admin** manages every employee, **Managers** see and edit their direct reports, and **Employees** see and edit only themselves. All authorization rules are in one file, [`backend/src/policies/employeePolicy.ts`](backend/src/policies/employeePolicy.ts). No other backend code branches on a user's role.
 
+To run it locally, follow [SETUP.md](SETUP.md).
+
 | Part | Runs at |
 |---|---|
 | Frontend | `http://localhost:5173` |
@@ -181,6 +183,8 @@ All routes are under `/api`. Every route except login and docs requires `Authori
 Every error uses the same body: `{ "error": { "code", "message", "details"? } }`.
 
 ## 9. Setup & Installation
+
+> **New here?** [SETUP.md](SETUP.md) is a step-by-step guide: database (Docker or Supabase), backend, frontend, sign-in, and running the six authorization scenarios in Swagger.
 
 ### Prerequisites
 
