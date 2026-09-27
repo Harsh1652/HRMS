@@ -9,10 +9,6 @@ coverage/
 !.env.example
 !.env.test.example
 
-# Graph indexes
-.code-review-graph/
-.codegraph/
-
 # Logs / OS / editor
 *.log
 .DS_Store
